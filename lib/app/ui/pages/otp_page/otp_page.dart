@@ -42,7 +42,8 @@ class OtpPage extends GetView<OtpController> {
 
                     Blurcontainer(
                       width: MediaQuery.of(context).size.width * 0.88,
-                      height: MediaQuery.of(context).size.height * 0.6,
+                      // <<<--- [TASK 11.2 - แก้ไข] ลบบรรทัด height
+                      // height: MediaQuery.of(context).size.height * 0.6,
                       padding: const EdgeInsets.all(10.0),
                       child: Column(
                         children: [

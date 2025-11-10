@@ -19,28 +19,29 @@ class DependencyInjection {
     // App Core
     Get.put<MainController>(MainController());
 
-    // --- [แก้ไข] เรียงลำดับการสร้างใหม่ ---
-
+    // --- [TASK 12.2 - เริ่มแก้ไข] ---
+    // เปลี่ยน lazyPut เป็น put (สร้างทันที) สำหรับ Core Controllers
+    
     // 1. สร้าง Services/Controllers หลัก (ที่ตัวอื่นต้องใช้) ก่อน
-    Get.lazyPut(() => LocationService(), fenix: true); // <<<--- ย้ายขึ้นมา
-    Get.lazyPut(() => LoginController(), fenix: true);
-    Get.lazyPut(() => NavbarController(), fenix: true);
+    Get.put(LocationService(), permanent: true); // <<<--- [แก้ไข]
+    Get.put(LoginController(), permanent: true); // <<<--- [แก้ไข]
+    Get.put(NavbarController(), permanent: true); // <<<--- [แก้ไข]
 
     // 2. สร้าง Controllers ที่ต้องพึ่งพาตัวบน
     // (FilterController ต้องใช้ LocationService และ LoginController)
-    Get.lazyPut(() => FilterController(), fenix: true); 
+    Get.put(FilterController(), permanent: true); // <<<--- [แก้ไข]
     
     // (MyShopController ต้องใช้ LoginController และ FilterController)
-    Get.lazyPut(() => MyShopController(), fenix: true);
+    Get.put(MyShopController(), permanent: true); // <<<--- [แก้ไข]
     
-    // 3. สร้าง Controllers ที่เหลือ
+    // 3. สร้าง Controllers ที่เหลือ (ยังเป็น lazyPut ได้)
     // (SlideController ต้องใช้ FilterController)
     Get.lazyPut(() => SlideController(), fenix: true); 
 
-    // 4. Scroll Controllers (ไม่ขึ้นอยู่กับใคร)
+    // 4. Scroll Controllers (ยังเป็น lazyPut ได้)
     Get.lazyPut(() => ScrollpageController(), tag: 'home_scroll', fenix: true);
     Get.lazyPut(() => ScrollpageController(), tag: 'favorite_scroll', fenix: true);
     Get.lazyPut(() => ScrollpageController(), tag: 'myshop_scroll', fenix: true);
-    // --- [สิ้นสุดการแก้ไข] ---
+    // --- [TASK 12.2 - สิ้นสุดการแก้ไข] ---
   }
 }

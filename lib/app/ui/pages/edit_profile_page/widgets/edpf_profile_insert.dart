@@ -2,6 +2,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+// <<<--- [TASK 12.3 - เพิ่ม] Import
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../edit_profile_controller.dart';
 
@@ -33,31 +35,43 @@ class EditProfileInsert extends StatelessWidget {
 
             // Logic การแสดงผลรูปภาพ
             if (imgUrlOrPath.startsWith('http')) {
-              // ถ้าเป็น URL
-              imageWidget = Image.network(
-                imgUrlOrPath,
-                // --- [แก้ไข] เพิ่ม width/height ให้ Image ---
+              // <<<--- [TASK 12.3 - เริ่มแก้ไข] ---
+              // (ลบ Image.network)
+              // imageWidget = Image.network(
+              //   imgUrlOrPath,
+              //   width: profileCircleSize,
+              //   height: profileCircleSize,
+              //   fit: BoxFit.cover, 
+              //   loadingBuilder: (context, child, loadingProgress) {
+              //     ...
+              //   },
+              //   errorBuilder: (context, error, stackTrace) =>
+              //       Image.asset(
+              //         'assets/ics/person.png', 
+              //         ...
+              //       ),
+              // );
+
+              // (ใช้ CachedNetworkImage แทน)
+              imageWidget = CachedNetworkImage(
+                imageUrl: imgUrlOrPath,
                 width: profileCircleSize,
                 height: profileCircleSize,
-                fit: BoxFit.cover, 
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-                },
-                errorBuilder: (context, error, stackTrace) =>
-                    Image.asset(
-                      'assets/ics/person.png', 
-                      // --- [แก้ไข] เพิ่ม width/height ให้ Image ---
-                      width: profileCircleSize,
-                      height: profileCircleSize,
-                      fit: BoxFit.cover
-                    ),
+                fit: BoxFit.cover,
+                placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                errorWidget: (context, url, error) => Image.asset(
+                  'assets/ics/person.png',
+                  width: profileCircleSize,
+                  height: profileCircleSize,
+                  fit: BoxFit.cover
+                ),
               );
+              // <<<--- [TASK 12.3 - สิ้นสุดการแก้ไข] ---
+
             } else if (imgUrlOrPath.startsWith('assets/')) {
                // ถ้าเป็น Asset (ค่าเริ่มต้น)
                imageWidget = Image.asset(
                  imgUrlOrPath, 
-                 // --- [แก้ไข] เพิ่ม width/height ให้ Image ---
                  width: profileCircleSize,
                  height: profileCircleSize,
                  fit: BoxFit.cover
@@ -66,7 +80,6 @@ class EditProfileInsert extends StatelessWidget {
               // ถ้าเป็น Path ใหม่ที่เพิ่งเลือก
               imageWidget = Image.file(
                 File(imgUrlOrPath),
-                // --- [แก้ไข] เพิ่ม width/height ให้ Image ---
                 width: profileCircleSize,
                 height: profileCircleSize,
                 fit: BoxFit.cover, 
@@ -75,7 +88,6 @@ class EditProfileInsert extends StatelessWidget {
               // กรณีอื่นๆ (เช่น ค่าว่าง)
               imageWidget = Image.asset(
                 'assets/ics/person.png', 
-                // --- [แก้ไข] เพิ่ม width/height ให้ Image ---
                 width: profileCircleSize,
                 height: profileCircleSize,
                 fit: BoxFit.cover

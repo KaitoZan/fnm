@@ -48,29 +48,39 @@ class ShowFavouriteCard extends StatelessWidget {
               ),
             );
           }
-          // --- แสดง List โดยใช้ map ---
-          return Column(
-            children: filterController.filteredFavoriteList.map((restaurant) {
+          
+          // <<<--- [TASK 16.7 - เริ่มแก้ไข] ---
+          return ListView.builder(
+            itemCount: filterController.filteredFavoriteList.length,
+            physics: const NeverScrollableScrollPhysics(), 
+            shrinkWrap: true, 
+            itemBuilder: (context, index) {
+              final restaurant = filterController.filteredFavoriteList[index];
               // ใช้ HomeRestaurantCard แสดงผล
               return HomeRestaurantCard(
                 imageUrl: restaurant.imageUrl,
                 restaurantName: restaurant.restaurantName,
                 description: restaurant.description,
                 rating: restaurant.rating,
-                isOpen: restaurant.isOpen, // ส่ง RxBool
-                showMotorcycleIcon: restaurant.showMotorcycleIcon,
-                distanceInMeters: restaurant.distanceInMeters, // <<<--- [เพิ่ม] ส่งระยะทาง
+                isOpen: restaurant.isOpen, 
+                
+                // <<< [แก้ไข]
+                // showMotorcycleIcon: restaurant.showMotorcycleIcon,
+                hasDelivery: restaurant.hasDelivery,
+                hasDineIn: restaurant.hasDineIn, // <<< [เพิ่ม]
+
+                distanceInMeters: restaurant.distanceInMeters, 
                 onTap: () {
-                  // --- แก้ไข: ใช้ restaurant.id ตรงๆ (ไม่ต้อง .toString()) ---
-                  final String restaurantIdString = restaurant.id; // <<<--- แก้ไข
+                  final String restaurantIdString = restaurant.id; 
                   Get.toNamed(
-                    AppRoutes.RESTAURANTDETAIL + '/$restaurantIdString', // <<<--- ใช้ String ID
-                    parameters: {'restaurantId': restaurantIdString}, // <<<--- ส่ง String ID
+                    AppRoutes.RESTAURANTDETAIL + '/$restaurantIdString', 
+                    parameters: {'restaurantId': restaurantIdString}, 
                   );
                 },
               );
-            }).toList(),
+            },
           );
+          // <<<--- [TASK 16.7 - สิ้นสุดการแก้ไข] ---
         }),
       ],
     );

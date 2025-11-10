@@ -1,9 +1,10 @@
-// lib/app/model/restaurant.dart (แก้ไขส่วน factory)
+// lib/app/model/restaurant.dart (แก้ไข)
 
 import 'package:get/get.dart';
+import 'menu_item.dart';
 
 class Restaurant {
-  // ... (ประกาศ Fields เหมือนเดิม - type เป็น String?) ...
+  // ... (Fields: id, imageUrl, ownerId, restaurantName, description, rating, isOpen) ...
   final String id;
   final String? imageUrl;
   final String? ownerId;
@@ -11,21 +12,27 @@ class Restaurant {
   final String description;
   final double rating;
   final RxBool isOpen;
-  final bool showMotorcycleIcon;
-  final String? detail; // <<<--- ชื่อตัวแปรถูกต้องแล้ว
+  
+  // <<<--- 1. [แก้ไข] เปลี่ยนชื่อ Field ให้ตรงกับ DB
+  // final bool showMotorcycleIcon; // (ชื่อเดิม)
+  final bool hasDelivery; // (ชื่อใหม่)
+  final bool hasDineIn; // <<< [เพิ่ม]
+  
+  final String? detail; 
   final String? openingHours;
   final String? phoneNumber;
   final String? location;
   final double? latitude;
   final double? longitude;
-  final List<String> menuImages; // <<<--- ยังคงเป็น List<String> (เก็บ URL แรกของแต่ละเมนู)
-  final List<String> promotion;
-  final String? type; // <<<--- String? สำหรับ food_type (Text)
+  final List<MenuItem> menuItems; 
+  final List<String> promotion; 
+  final List<String> galleryImages; 
+  final String? type; 
   final RxBool isFavorite;
   double distanceInMeters;
 
 
-  // Constructor (เหมือนเดิม)
+  // Constructor
   Restaurant({
     required this.id,
     this.imageUrl,
@@ -34,42 +41,32 @@ class Restaurant {
     required this.description,
     required this.rating,
     required bool isOpen,
-    required this.showMotorcycleIcon,
+    // required this.showMotorcycleIcon, // <<< 2. [แก้ไข]
+    required this.hasDelivery, // <<< [แก้ไข]
+    required this.hasDineIn, // <<< [เพิ่ม]
     this.detail,
     this.openingHours,
     this.phoneNumber,
     this.location,
     this.latitude,
     this.longitude,
-    required this.menuImages, // <<<--- รับ List<String>
+    required this.menuItems,
     required this.promotion,
-    this.type, // <<<--- รับ String?
+    required this.galleryImages, 
+    this.type, 
     required bool isFavorite,
     this.distanceInMeters = double.maxFinite,
   })  : this.isOpen = isOpen.obs,
         this.isFavorite = isFavorite.obs;
 
-  // *** แก้ไข Factory fromSupabaseMap ตรงนี้ ***
+  // *** แก้ไข Factory fromSupabaseMap ***
   factory Restaurant.fromSupabaseMap(Map<String, dynamic> map, bool isCurrentlyFavorite) {
 
-    // --- ส่วนประมวลผล menus ที่แก้ไขแล้ว ---
+    // (ส่วนประมวลผล menus ... เหมือนเดิม)
     final List<dynamic> menuData = map['menus'] as List<dynamic>? ?? [];
-    final List<String> menuImageUrls = []; // สร้าง List ว่าง
-
-    for (var menu in menuData) { // วนลูปแต่ละเมนู (Map)
-      // อ่าน img_url (ซึ่งเป็น List หรือ null)
-      final dynamic imgUrlData = menu['img_url'];
-
-      if (imgUrlData is List && imgUrlData.isNotEmpty) {
-        // ถ้า img_url เป็น List และไม่ว่าง
-        final String? firstUrl = imgUrlData.first as String?; // เอา URL แรกมา
-        if (firstUrl != null && firstUrl.isNotEmpty) {
-          menuImageUrls.add(firstUrl); // เพิ่ม URL แรกลงใน List ผลลัพธ์
-        }
-      }
-      // ถ้า imgUrlData ไม่ใช่ List หรือเป็น List ว่าง ก็ไม่ต้องทำอะไร (ข้ามไป)
-    }
-    // --- สิ้นสุดส่วนประมวลผล menus ---
+    final List<MenuItem> fullMenuItems = menuData
+        .map((menuMap) => MenuItem.fromMap(menuMap as Map<String, dynamic>))
+        .toList();
 
     // (ดึง Lat/Lng, is_open - เหมือนเดิม)
     double? lat = (map['latitude'] as num?)?.toDouble();
@@ -84,6 +81,15 @@ class Restaurant {
     } else if (promoData is String && promoData.isNotEmpty) {
       promotionList = [promoData];
     }
+    
+    // (ส่วนจัดการ gallery_imgs_urls - เหมือนเดิม)
+    List<String> galleryList = [];
+    final dynamic galleryData = map['gallery_imgs_urls']; // <<< Field ใหม่
+    if (galleryData is List) {
+      galleryList = List<String>.from(galleryData.whereType<String>());
+    } else if (galleryData is String && galleryData.isNotEmpty) {
+      galleryList = [galleryData];
+    }
 
     // สร้าง Instance
     return Restaurant(
@@ -94,22 +100,24 @@ class Restaurant {
       description: map['description'] as String? ?? '',
       rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
       isOpen: currentIsOpen,
-      showMotorcycleIcon: map['has_delivery'] as bool? ?? false,
-      // detail: map['description_inside'] as String?, // <<<--- แก้ไข
-      detail: map['detail'] as String?, // <<<--- TASK 3
+      // showMotorcycleIcon: map['has_delivery'] as bool? ?? false, // <<< 3. [แก้ไข]
+      hasDelivery: map['has_delivery'] as bool? ?? false, // <<< [แก้ไข]
+      hasDineIn: map['has_dine_in'] as bool? ?? false, // <<< [เพิ่ม]
+      detail: map['detail'] as String?,
       openingHours: map['opening_hours']?.toString(),
       phoneNumber: map['phone_no'] as String?,
       location: map['location'] as String?,
       latitude: lat,
       longitude: lng,
-      menuImages: menuImageUrls, // <<<--- ใช้ List<String> ที่ได้จากการประมวลผล
+      menuItems: fullMenuItems, 
       promotion: promotionList,
-      type: map['food_type'] as String?, // <<<--- อ่าน food_type เป็น String?
+      galleryImages: galleryList, 
+      type: map['food_type'] as String?, 
       isFavorite: isCurrentlyFavorite,
     );
   }
 
-  // copyWith (เหมือนเดิม - ใช้ String? type)
+  // 4. [แก้ไข] copyWith
   Restaurant copyWith({
     String? id,
     String? imageUrl,
@@ -118,16 +126,19 @@ class Restaurant {
     String? description,
     double? rating,
     bool? isOpen,
-    bool? showMotorcycleIcon,
+    // bool? showMotorcycleIcon, // <<< 5. [แก้ไข]
+    bool? hasDelivery, // <<< [แก้ไข]
+    bool? hasDineIn, // <<< [เพิ่ม]
     String? detail,
     String? openingHours,
     String? phoneNumber,
     String? location,
     double? latitude,
     double? longitude,
-    List<String>? menuImages,
+    List<MenuItem>? menuItems,
     List<String>? promotion,
-    String? type, // <<<--- String?
+    List<String>? galleryImages, 
+    String? type, 
     bool? isFavorite,
     double? distanceInMeters,
   }) {
@@ -139,16 +150,19 @@ class Restaurant {
       description: description ?? this.description,
       rating: rating ?? this.rating,
       isOpen: isOpen ?? this.isOpen.value,
-      showMotorcycleIcon: showMotorcycleIcon ?? this.showMotorcycleIcon,
+      // showMotorcycleIcon: showMotorcycleIcon ?? this.showMotorcycleIcon, // <<< 6. [แก้ไข]
+      hasDelivery: hasDelivery ?? this.hasDelivery, // <<< [แก้ไข]
+      hasDineIn: hasDineIn ?? this.hasDineIn, // <<< [เพิ่ม]
       detail: detail ?? this.detail,
       openingHours: openingHours ?? this.openingHours,
       phoneNumber: phoneNumber ?? this.phoneNumber,
       location: location ?? this.location,
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
-      menuImages: menuImages ?? this.menuImages,
+      menuItems: menuItems ?? this.menuItems,
       promotion: promotion ?? this.promotion,
-      type: type ?? this.type, // <<<--- ใช้ type
+      galleryImages: galleryImages ?? this.galleryImages, 
+      type: type ?? this.type,
       isFavorite: isFavorite ?? this.isFavorite.value,
       distanceInMeters: distanceInMeters ?? this.distanceInMeters,
     );

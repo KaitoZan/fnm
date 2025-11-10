@@ -14,7 +14,13 @@ class MyShopCard extends StatelessWidget {
   final String description;
   final double rating;
   final RxBool isOpen; // รับ RxBool จาก Model
-  final bool showMotorcycleIcon; // has_delivery
+  
+  // <<<--- [TASK 17.1 - เริ่มแก้ไข] ---
+  // final bool showMotorcycleIcon; // (ลบ)
+  final bool hasDelivery; // (เพิ่ม)
+  final bool hasDineIn; // (เพิ่ม)
+  // <<<--- [สิ้นสุดการแก้ไข] ---
+  
   final VoidCallback? onTap;
   // --- เปลี่ยน shopId เป็น String (UUID) ---
   final String shopId; // <<<--- แก้ไข Type เป็น String
@@ -26,7 +32,9 @@ class MyShopCard extends StatelessWidget {
     required this.description,
     this.rating = 0.0,
     required this.isOpen,
-    this.showMotorcycleIcon = false,
+    // this.showMotorcycleIcon = false, // <<<--- [TASK 17.1 - แก้ไข] (ลบ)
+    required this.hasDelivery, // (เพิ่ม)
+    required this.hasDineIn, // (เพิ่ม)
     this.onTap,
     required this.shopId, // <<<--- รับ String
   });
@@ -71,7 +79,19 @@ class MyShopCard extends StatelessWidget {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           StarRating( rating: rating, size: 10, onRatingChanged: (newRating) {} ),
-                          Obx(() => StatusTag( isOpen: isOpen.value, showMotorcycleIcon: showMotorcycleIcon, iconSize: 16, showOpenStatus: false)),
+                          
+                          // <<<--- [TASK 17.1 - เริ่มแก้ไข] ---
+                          // (แก้ไขการเรียก StatusTag)
+                          Obx(() => StatusTag( 
+                            isOpen: isOpen.value, 
+                            // showMotorcycleIcon: showMotorcycleIcon, // (ลบ)
+                            hasDelivery: hasDelivery, // (เพิ่ม)
+                            hasDineIn: hasDineIn, // (เพิ่ม)
+                            iconSize: 16, 
+                            showOpenStatus: false
+                          )),
+                          // <<<--- [TASK 17.1 - สิ้นสุดการแก้ไข] ---
+                          
                           // --- ส่วน Switch เปิด/ปิดร้าน ---
                           Obx(() => Row(
                               mainAxisSize: MainAxisSize.min,

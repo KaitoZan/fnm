@@ -35,98 +35,104 @@ class DetailHeadBannerText extends StatelessWidget {
         Container(
           height: 56, // ความสูงแถบ (ปรับได้)
           color: Colors.pink.shade50, // สีพื้นหลังแถบ
-          child: Stack(
-            alignment: Alignment.center,
+          // <<<--- [TASK 8 - เริ่มแก้ไข] ---
+          // เปลี่ยนจาก Stack เป็น Row
+          child: Row(
             children: [
-              // --- ชื่อร้าน ---
-              Align(
-                alignment: Alignment.center,
-                // ใช้ Obx เพื่อรอข้อมูล restaurant
+              
+              // --- 1. ส่วนด้านซ้าย: ปุ่ม Favorite (Bookmark) ---
+              SizedBox(
+                width: 56, // กว้างเท่าๆ IconButton (เผื่อ padding 12 + icon 28 + padding 12)
+                child: Obx(() {
+                  if (controller.restaurant.value == null) {
+                    return const SizedBox.shrink(); // ว่าง
+                  }
+                  final restaurant = controller.restaurant.value!;
+                  
+                  return Align(
+                    alignment: Alignment.center, // จัดกลางใน SizedBox
+                    child: IconButton(
+                      icon: Icon(
+                        restaurant.isFavorite.value
+                            ? Icons.bookmark_rounded
+                            : Icons.bookmark_outline_rounded,
+                        color: restaurant.isFavorite.value
+                            ? Colors.amber.shade700
+                            : Colors.grey.shade600,
+                        size: 28, 
+                      ),
+                      tooltip: restaurant.isFavorite.value ? 'ลบออกจากโปรด' : 'เพิ่มในรายการโปรด',
+                      onPressed: loginController.isLoggedIn.value
+                          ? () {
+                              filterController.toggleFavorite(restaurant.id.toString());
+                            }
+                          : () { 
+                              Get.snackbar(
+                                'System',
+                                'กรุณาเข้าสู่ระบบเพื่อเพิ่มร้านค้าในรายการโปรด',
+                                snackPosition: SnackPosition.TOP,
+                                backgroundColor: Colors.black.withOpacity(0.1),
+                                colorText: Colors.black,
+                                duration: const Duration(milliseconds: 1200),
+                              );
+                            },
+                    ),
+                  );
+                }),
+              ),
+
+              // --- 2. ส่วนกลาง: ชื่อร้าน (ขยายเต็ม) ---
+              Expanded(
                 child: Obx(() => Text(
-                  // ใช้ ?. และ ?? เพื่อจัดการ null
                   controller.restaurant.value?.restaurantName ?? 'กำลังโหลด...',
                   style: GoogleFonts.poppins(
                     fontSize: 16,
-                    color: Colors.black87, // <<<--- ปรับสีให้เข้มขึ้นเล็กน้อย
+                    color: Colors.black87, 
                     fontWeight: FontWeight.bold,
                   ),
-                  textAlign: TextAlign.center, // <<<--- จัดกลางเผื่อชื่อยาว
-                  overflow: TextOverflow.ellipsis, // <<<--- ตัดข้อความถ้าชื่อยาวมาก
+                  textAlign: TextAlign.center, // <<<--- จัดกลาง
+                  overflow: TextOverflow.ellipsis, 
                   maxLines: 1,
                 )),
               ),
-              // --- ปุ่ม Favorite ---
-              Align(
-                alignment: Alignment.centerRight,
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 12.0), // <<<--- ปรับ Padding
-                  child: Obx(() {
-                    // Check null ก่อน
-                    if (controller.restaurant.value == null) {
-                      return const SizedBox(width: 48); // Widget ว่างขนาดเท่า IconButton
-                    }
-                    final restaurant = controller.restaurant.value!;
 
-                    // --- [เพิ่ม] ตรวจสอบว่าเป็นเจ้าของร้านหรือไม่ ---
-                    final bool isOwner = loginController.isLoggedIn.value &&
+              // --- 3. ส่วนด้านขวา: ปุ่ม Report ---
+              SizedBox(
+                width: 56, // กว้างเท่าๆ IconButton (เผื่อ padding 12 + icon 28 + padding 12)
+                child: Obx(() {
+                  if (controller.restaurant.value == null) {
+                    return const SizedBox.shrink(); // ว่าง
+                  }
+                  final restaurant = controller.restaurant.value!;
+                  final bool isOwner = loginController.isLoggedIn.value &&
                                       restaurant.ownerId == loginController.userId.value;
 
-                    return Row( // <<<--- [แก้ไข] ใช้ Row
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        
-                        // --- [เพิ่ม] ปุ่มรายงานร้าน (แสดงเมื่อ *ไม่ใช่* เจ้าของ และ Login) ---
-                        if (!isOwner && loginController.isLoggedIn.value)
-                          IconButton(
-                            icon: Icon(
-                              Icons.flag_outlined,
-                              color: Colors.red.shade600,
-                              size: 28,
-                            ),
-                            tooltip: 'รายงานร้านค้านี้',
-                            onPressed: () {
-                              // เรียกฟังก์ชันรายงานร้านใน Controller
-                              controller.showReportRestaurantDialog();
-                            },
-                          ),
-
-                        // --- ปุ่ม Favorite (Bookmark) (เหมือนเดิม) ---
-                        IconButton(
-                          icon: Icon(
-                            // ไอคอน Bookmark (หัวใจ)
-                            restaurant.isFavorite.value
-                                ? Icons.bookmark_rounded
-                                : Icons.bookmark_outline_rounded,
-                            // สีไอคอน
-                            color: restaurant.isFavorite.value
-                                ? Colors.amber.shade700 // <<<--- ปรับสีให้เข้มขึ้น
-                                : Colors.grey.shade600, // <<<--- ปรับสี
-                            size: 28, // <<<--- ปรับขนาดไอคอน
-                          ),
-                          tooltip: restaurant.isFavorite.value ? 'ลบออกจากโปรด' : 'เพิ่มในรายการโปรด', // <<<--- เพิ่ม Tooltip
-                          onPressed: loginController.isLoggedIn.value
-                              ? () {
-                                  // --- แก้ไข: แปลง restaurant.id (int) เป็น String ---
-                                  filterController.toggleFavorite(restaurant.id.toString());
-                                }
-                              : () { // กรณีไม่ได้ Login
-                                  Get.snackbar(
-                                    'System',
-                                    'กรุณาเข้าสู่ระบบเพื่อเพิ่มร้านค้าในรายการโปรด',
-                                    snackPosition: SnackPosition.TOP,
-                                    backgroundColor: Colors.black.withOpacity(0.1),
-                                    colorText: Colors.black,
-                                    duration: const Duration(milliseconds: 1200), // <<<--- นานขึ้นเล็กน้อย
-                                  );
-                                },
+                  // แสดงปุ่ม Report (ถ้าไม่ใช่เจ้าของ และ Login)
+                  if (!isOwner && loginController.isLoggedIn.value) {
+                    return Align(
+                      alignment: Alignment.center, // จัดกลางใน SizedBox
+                      child: IconButton(
+                        icon: Icon(
+                          Icons.flag_outlined,
+                          color: Colors.red.shade600,
+                          size: 28,
                         ),
-                      ],
+                        tooltip: 'รายงานร้านค้านี้',
+                        onPressed: () {
+                          controller.showReportRestaurantDialog();
+                        },
+                      ),
                     );
-                  }),
-                ),
+                  }
+                  
+                  // ถ้าเป็นเจ้าของ หรือ ไม่ได้ Login
+                  return const SizedBox.shrink(); // ว่าง (เพื่อให้ชื่อร้านอยู่ตรงกลาง)
+                }),
               ),
+              
             ],
           ),
+          // <<<--- [TASK 8 - สิ้นสุดการแก้ไข] ---
         ),
         // --- เส้นประ ---
         Dotline(

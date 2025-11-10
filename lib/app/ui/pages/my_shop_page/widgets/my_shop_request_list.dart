@@ -36,15 +36,28 @@ class MyShopRequestList extends StatelessWidget {
         );
       }
 
-      // 3. แสดง List
-      return Column(
-        children: [
-          ...controller.myRequestList.map((request) {
-            return MyShopRequestCard(key: ValueKey(request.id), request: request);
-          }).toList(),
-          const SizedBox(height: 80), // Padding ด้านล่างสุด (เผื่อ FAB)
-        ],
+      // <<<--- [TASK 15 - เริ่มแก้ไข] ---
+      // เป็น ListView.builder
+      return ListView.builder(
+        itemCount: controller.myRequestList.length,
+        
+        // <<< [สำคัญ] เพิ่มบรรทัดนี้
+        physics: const NeverScrollableScrollPhysics(), 
+        
+        shrinkWrap: true, // <<< [สำคัญ]
+        itemBuilder: (context, index) {
+          final request = controller.myRequestList[index];
+          // เพิ่ม Padding ด้านล่างสำหรับ item สุดท้าย
+          if (index == controller.myRequestList.length - 1) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 80.0),
+              child: MyShopRequestCard(key: ValueKey(request.id), request: request),
+            );
+          }
+          return MyShopRequestCard(key: ValueKey(request.id), request: request);
+        },
       );
+      // <<<--- [TASK 15 - สิ้นสุดการแก้ไข] ---
     });
   }
 }

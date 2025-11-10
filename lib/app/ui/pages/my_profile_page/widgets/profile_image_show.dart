@@ -1,7 +1,8 @@
 // lib/app/ui/pages/my_profile_page/widgets/profileimshow.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-// import 'dart:io'; // ไม่จำเป็นต้องใช้ File แล้ว
+// <<<--- [TASK 12.3 - เพิ่ม] Import
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../login_page/login_controller.dart';
 
@@ -30,18 +31,27 @@ class Profileimshow extends StatelessWidget {
           Widget imageWidget;
 
           if (imageUrl.startsWith('http')) {
-            // --- ถ้าเป็น URL จาก Supabase ---
-            imageWidget = Image.network(
-              imageUrl,
+            // <<<--- [TASK 12.3 - เริ่มแก้ไข] ---
+            // (ลบ Image.network)
+            // imageWidget = Image.network(
+            //   imageUrl,
+            //   fit: BoxFit.cover,
+            //   loadingBuilder: (context, child, loadingProgress) {
+            //     ...
+            //   },
+            //   errorBuilder: (context, error, stackTrace) =>
+            //       Image.asset('assets/ics/person.png', fit: BoxFit.cover), // รูป Default
+            // );
+            
+            // (ใช้ CachedNetworkImage แทน)
+            imageWidget = CachedNetworkImage(
+              imageUrl: imageUrl,
               fit: BoxFit.cover,
-              // เพิ่ม loadingBuilder และ errorBuilder
-              loadingBuilder: (context, child, loadingProgress) {
-                if (loadingProgress == null) return child;
-                return const Center(child: CircularProgressIndicator(strokeWidth: 2));
-              },
-              errorBuilder: (context, error, stackTrace) =>
-                  Image.asset('assets/ics/person.png', fit: BoxFit.cover), // รูป Default
+              placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+              errorWidget: (context, url, error) => Image.asset('assets/ics/person.png', fit: BoxFit.cover),
             );
+            // <<<--- [TASK 12.3 - สิ้นสุดการแก้ไข] ---
+
           } else if (imageUrl.startsWith('assets/')) {
              // --- ถ้าเป็น Asset (ค่าเริ่มต้น) ---
              imageWidget = Image.asset(imageUrl, fit: BoxFit.cover);

@@ -53,6 +53,9 @@ class HomePage extends GetView<HomeController> {
                       child: Padding(
                         padding: const EdgeInsets.only(top: 10),
                         child: SingleChildScrollView(
+                          // <<<--- [TASK 12.1 - เพิ่ม]
+                          physics: const AlwaysScrollableScrollPhysics(), // <<< ทำให้เลื่อนได้เสมอ
+                          // <<<--- [สิ้นสุดการเพิ่ม]
                           controller: scrollpageController.scrollController,
                           padding: const EdgeInsets.all(16.0),
                           child: Column(
@@ -74,17 +77,7 @@ class HomePage extends GetView<HomeController> {
                 ],
               ),
               BtScrollTop(tag: 'home_scroll'),
-              // Obx(
-              //   () => scrollpageController.showScrollToTopButton.value
-              //       ? Positioned(
-              //           right: 20.0,
-              //           bottom: MediaQuery.of(context).padding.bottom + 16.0,
-              //           child: ScrollToTopButton(
-              //             onPressed: scrollpageController.scrollToTop,
-              //           ),
-              //         )
-              //       : Container(),
-              // ),
+              // (โค้ด Obx ของ BtScrollTop ... ถูกย้ายไปใน BtScrollTop.dart แล้ว)
             ],
           ),
         ),
@@ -92,4 +85,3 @@ class HomePage extends GetView<HomeController> {
     );
   }
 }
-

@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:food_near_me_app/app/model/bannerslide.dart';
 import 'package:get/get.dart';
+// <<<--- [TASK 12.3 - เพิ่ม] Import
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../global_widgets/slide_ctrl.dart'; // <<<--- Import SlideController
 import '../../../../routes/app_routes.dart'; // <<<--- Import AppRoutes
@@ -50,18 +52,27 @@ class HomeSlideImage extends StatelessWidget {
                           // --- แก้ไข Navigation ---
                           controller.navigateToRestaurantDetail(bannerItem.restaurantId);
                         },
-                        // Image.network เนื่องจาก URL รูปโปรโมชันมาจาก Supabase
-                        child: Image.network( 
-                          bannerItem.imagePath,
-                          fit: BoxFit.cover, // ให้รูปเต็มกรอบ
-                          loadingBuilder: (context, child, loadingProgress) {
-                             if (loadingProgress == null) return child;
-                             return Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.pink.shade300));
-                          },
-                          // --- (Optional) เพิ่ม errorBuilder เผื่อ path ผิด ---
-                          errorBuilder: (context, error, stackTrace) =>
-                              Container(color: Colors.grey[200], child: const Icon(Icons.error)),
+                        
+                        // <<<--- [TASK 12.3 - เริ่มแก้ไข] ---
+                        // (ลบ Image.network)
+                        // child: Image.network( 
+                        //   bannerItem.imagePath,
+                        //   fit: BoxFit.cover, 
+                        //   loadingBuilder: (context, child, loadingProgress) {
+                        //     ...
+                        //   },
+                        //   errorBuilder: (context, error, stackTrace) =>
+                        //       Container(color: Colors.grey[200], child: const Icon(Icons.error)),
+                        // ),
+
+                        // (ใช้ CachedNetworkImage แทน)
+                        child: CachedNetworkImage(
+                          imageUrl: bannerItem.imagePath,
+                          fit: BoxFit.cover,
+                          placeholder: (context, url) => Center(child: CircularProgressIndicator(strokeWidth: 2, color: Colors.pink.shade300)),
+                          errorWidget: (context, url, error) => Container(color: Colors.grey[200], child: const Icon(Icons.error)),
                         ),
+                        // <<<--- [TASK 12.3 - สิ้นสุดการแก้ไข] ---
                       ),
                     ),
                   );
@@ -73,40 +84,34 @@ class HomeSlideImage extends StatelessWidget {
 
         // --- ส่วน Indicator (จุดๆ แสดงหน้าปัจจุบัน) ---
         Obx(() {
-          // ใช้ List originalBannerItems ในการนับจำนวนจุด
+          // (Logic การแสดง Indicator ... เหมือนเดิม)
           if (controller.originalBannerItems.length < 2) {
-            return const SizedBox.shrink(); // Widget ว่างเปล่า
+            return const SizedBox.shrink(); 
           }
-
-          // คำนวณ Index ของ Indicator ที่ถูกต้อง
           int actualIndex = controller.currentPage.value;
-          // แปลง index ของ displayList (รวมหัวท้าย) ให้เป็น index ของ originalList
           if (controller.originalBannerItems.length > 0) {
             if (actualIndex == 0) {
               actualIndex = controller.originalBannerItems.length;
             } else if (actualIndex == controller.displayBannerItems.length - 1) {
               actualIndex = 1;
             }
-            actualIndex -= 1; // index ใน List เริ่มจาก 0
+            actualIndex -= 1; 
           } else {
              return const SizedBox.shrink(); 
           }
 
-
-          // แสดง Indicator (Row ของจุด)
           return Row(
-            mainAxisAlignment: MainAxisAlignment.center, // จัดกลาง
+            mainAxisAlignment: MainAxisAlignment.center, 
             children: List.generate(controller.originalBannerItems.length, (index) {
                 return Container(
                   width: 8.0,
                   height: 8.0,
-                  margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 2.0), // <<<--- เพิ่ม const
+                  margin: const EdgeInsets.symmetric(vertical: 10.0, horizontal: 2.0), 
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
-                    // สีของจุด (Active/Inactive)
                     color: actualIndex == index
-                        ? Colors.pink.shade300 // <<<--- สี Active
-                        : Colors.grey.shade400, // <<<--- สี Inactive
+                        ? Colors.pink.shade300 
+                        : Colors.grey.shade400, 
                   ),
                 );
             }),

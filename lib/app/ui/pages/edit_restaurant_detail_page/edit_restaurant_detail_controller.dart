@@ -9,41 +9,63 @@ import 'package:path/path.dart' as p;
 
 import '../../global_widgets/filter_ctrl.dart';
 import '../../../model/restaurant.dart';
+import '../../../model/menu_item.dart'; 
 import '../restaurant_detail_page/restaurant_detail_controller.dart';
 
-// <<<--- FIX 1: ย้าย export directive ขึ้นมาก่อน class/enum/declarations อื่นๆ ---
-export 'package:food_near_me_app/app/ui/pages/edit_restaurant_detail_page/edit_restaurant_detail_controller.dart' show BannerType;
-// ----------------------------------------------------------------------------------
+export 'package:food_near_me_app/app/ui/pages/edit_restaurant_detail_page/edit_restaurant_detail_controller.dart' show BannerType, MenuItemController;
 
-// <<<--- FIX 2: ประกาศ enum BannerType ตามหลัง import/export directives ---
 enum BannerType { image, text }
-// ------------------------------------------------------------------------
+
+class MenuItemController {
+  final TextEditingController nameController;
+  final TextEditingController priceController;
+  final int? originalId; 
+
+  MenuItemController({String name = '', String price = '', this.originalId})
+      : nameController = TextEditingController(text: name),
+        priceController = TextEditingController(text: price);
+  
+  void dispose() {
+    nameController.dispose();
+    priceController.dispose();
+  }
+}
+
 
 class RestaurantEditDetailController extends GetxController {
- final String restaurantId; // String (uuid)
+ final String restaurantId; 
  late final FilterController _filterController;
  final supabase = Supabase.instance.client;
 
  // Controllers, State
  final Rx<Restaurant?> restaurantToEdit = Rx<Restaurant?>(null);
- final restaurantNameController = TextEditingController(); // res_name
- final descriptionController = TextEditingController(); // description
- final detailController = TextEditingController(); // สำหรับ detail
+ final restaurantNameController = TextEditingController(); 
+ final descriptionController = TextEditingController(); 
+ final detailController = TextEditingController(); 
  final openingHoursController = TextEditingController();
- final phoneNumberController = TextEditingController(); // phone_no
- final locationController = TextEditingController(); // location (Text)
+ final phoneNumberController = TextEditingController(); 
+ final locationController = TextEditingController(); 
  final latitudeController = TextEditingController();
  final longitudeController = TextEditingController();
- final typeController = TextEditingController(); // UI สำหรับ food_type (Text)
+ final typeController = TextEditingController(); 
  final RxBool isLoading = false.obs;
- final RxString coverImageUrlOrPath = ''.obs; // res_img
- final RxList<String> menuImageUrlsOrPaths = <String>[].obs; // menus.img_url
- final RxList<String> bannerImageUrlsOrPaths = <String>[].obs; // promo_imgs_urls
+ final RxString coverImageUrlOrPath = ''.obs; 
+ 
+ final RxList<MenuItemController> menuControllers = <MenuItemController>[].obs;
+ 
+ final RxList<String> galleryImageUrlsOrPaths = <String>[].obs;
+ final RxList<String> promotionImageUrlsOrPaths = <String>[].obs; 
+
+ // <<<--- [TASK 16.11a - 1. เพิ่ม] State สำหรับ Checkboxes
+ final RxBool hasDelivery = false.obs;
+ final RxBool hasDineIn = false.obs;
+ // <<<--- [สิ้นสุดการเพิ่ม]
 
  // Original Data
  String? _originalCoverImageUrl;
- List<String> _originalMenuImageUrls = [];
- List<String> _originalBannerImageUrls = [];
+ List<String> _originalGalleryImageUrls = []; 
+ List<String> _originalPromotionImageUrls = []; 
+ 
  final Rx<BannerType> selectedBannerType = BannerType.image.obs;
  final RxList<TextEditingController> bannerTextControllers = <TextEditingController>[].obs;
  double? _originalLatitude;
@@ -56,15 +78,17 @@ class RestaurantEditDetailController extends GetxController {
  void onInit() {
  	super.onInit();
  	_filterController = Get.find<FilterController>();
- 	_loadRestaurantData(); // โหลดข้อมูลร้านปัจจุบัน
+ 	_loadRestaurantData(); 
  }
 
  @override
  void onClose() {
- 	// Dispose Text Controllers ทั้งหมด
  	for (var controller in bannerTextControllers) {
  	  controller.dispose();
  	}
+  for (var controller in menuControllers) {
+    controller.dispose();
+  }
  	restaurantNameController.dispose();
  	descriptionController.dispose();
  	detailController.dispose(); 
@@ -77,7 +101,7 @@ class RestaurantEditDetailController extends GetxController {
  	super.onClose();
  }
 
- // --- 3. _loadRestaurantData (โหลด detail) ---
+ // --- [TASK 16.11a - 2. แก้ไข] _loadRestaurantData
  void _loadRestaurantData() {
  	final foundRestaurant = _filterController.allRestaurantsObservable
  		.firstWhereOrNull((res) => res.id == restaurantId);
@@ -85,76 +109,88 @@ class RestaurantEditDetailController extends GetxController {
  	if (foundRestaurant != null) {
  	  restaurantToEdit.value = foundRestaurant;
 
- 	  // โหลดข้อมูล Text Fields
+ 	  // (โหลดข้อมูล Text Fields)
  	  restaurantNameController.text = foundRestaurant.restaurantName;
  	  descriptionController.text = foundRestaurant.description;
- 	  detailController.text = foundRestaurant.detail ?? ''; // โหลด detail
+ 	  detailController.text = foundRestaurant.detail ?? ''; 
  	  openingHoursController.text = foundRestaurant.openingHours ?? '';
  	  phoneNumberController.text = foundRestaurant.phoneNumber ?? '';
  	  locationController.text = foundRestaurant.location ?? '';
  	  latitudeController.text = foundRestaurant.latitude?.toString() ?? '';
  	  longitudeController.text = foundRestaurant.longitude?.toString() ?? '';
- 	  
- 	  typeController.text = foundRestaurant.type ?? ''; // food_type (Text)
-
- 	  // (เก็บค่า Location เดิม)
+ 	  typeController.text = foundRestaurant.type ?? ''; 
  	  _originalLatitude = foundRestaurant.latitude;
  	  _originalLongitude = foundRestaurant.longitude;
  	  _originalLocationText = foundRestaurant.location ?? '';
 
- 	  // (โหลด URL รูปภาพ)
+ 	  // (โหลด URL รูปหน้าปก)
  	  coverImageUrlOrPath.value = foundRestaurant.imageUrl ?? '';
  	  _originalCoverImageUrl = foundRestaurant.imageUrl;
- 	  menuImageUrlsOrPaths.assignAll(foundRestaurant.menuImages);
- 	  _originalMenuImageUrls = List.from(foundRestaurant.menuImages);
+   
+    // (โหลด Menu Controllers)
+    menuControllers.assignAll(foundRestaurant.menuItems.map((item) {
+        return MenuItemController(
+          name: item.name,
+          price: item.price > 0 ? item.price.toStringAsFixed(0) : '',
+          originalId: item.id
+        );
+    }).toList());
+
+    // (โหลด Gallery)
+    galleryImageUrlsOrPaths.assignAll(foundRestaurant.galleryImages);
+    _originalGalleryImageUrls = List.from(foundRestaurant.galleryImages);
+
+    // <<<--- [TASK 16.11a - 3. เพิ่ม] โหลด Checkboxes
+    hasDelivery.value = foundRestaurant.hasDelivery;
+    hasDineIn.value = foundRestaurant.hasDineIn;
+    // <<<--- [สิ้นสุดการเพิ่ม]
 
  	  // (โหลดข้อมูลโปรโมชั่น)
  	  bool isImageBanner = foundRestaurant.promotion.isNotEmpty &&
  		  (foundRestaurant.promotion.any((url) => url.startsWith('http')));
 
  	  if (isImageBanner) {
- 		selectedBannerType.value = BannerType.image;
- 		bannerImageUrlsOrPaths.assignAll(_originalBannerImageUrls = List.from(foundRestaurant.promotion));
- 		for (var controller in bannerTextControllers) { controller.dispose(); }
- 		bannerTextControllers.clear();
- 	  } else { // เป็น Text หรือ ไม่มีข้อมูล
- 		selectedBannerType.value = BannerType.text;
- 		bannerImageUrlsOrPaths.clear();
- 		_originalBannerImageUrls = [];
- 		for (var controller in bannerTextControllers) { controller.dispose(); }
- 		bannerTextControllers.assignAll(foundRestaurant.promotion
+ 		  selectedBannerType.value = BannerType.image;
+ 		  promotionImageUrlsOrPaths.assignAll(_originalPromotionImageUrls = List.from(foundRestaurant.promotion));
+ 		  for (var controller in bannerTextControllers) { controller.dispose(); }
+ 		  bannerTextControllers.clear();
+ 	  } else { 
+ 		  selectedBannerType.value = BannerType.text;
+ 		  promotionImageUrlsOrPaths.clear(); 
+ 		  _originalPromotionImageUrls = []; 
+ 		  for (var controller in bannerTextControllers) { controller.dispose(); }
+ 		  bannerTextControllers.assignAll(foundRestaurant.promotion
  			.map((text) => TextEditingController(text: text))
  			.toList());
  	  }
  	} else {
- 	  // กรณีไม่พบข้อมูลร้าน
  	  Get.snackbar('ข้อผิดพลาด', 'ไม่พบข้อมูลร้านค้า');
  	  Get.back();
  	}
  }
 
- // --- 4. ฟังก์ชันเลือกรูปภาพ (Private Helper) ---
+ // (ฟังก์ชันเลือกรูปภาพ _pickImages)
  Future<void> _pickImages(ImageSource source, {required String imageType}) async {
  	  final ImagePicker picker = ImagePicker();
- 	  if (imageType == 'cover') { // เลือกรูปเดียว
+ 	  if (imageType == 'cover') { 
  		  final XFile? image = await picker.pickImage(source: source);
  		  if (image != null) {
- 			  coverImageUrlOrPath.value = image.path; // อัปเดต State
+ 			  coverImageUrlOrPath.value = image.path; 
  		  }
- 	  } else { // เลือกหลายรูป (menu, promotion)
+ 	  } else { 
  		  final List<XFile> pickedFiles = await picker.pickMultiImage();
  		  if (pickedFiles.isNotEmpty) {
  			  final paths = pickedFiles.map((x) => x.path).toList();
- 			  if (imageType == 'menu') {
- 				  menuImageUrlsOrPaths.addAll(paths);
- 			  } else if (imageType == 'promotion') {
- 				  bannerImageUrlsOrPaths.addAll(paths);
+ 			  if (imageType == 'gallery') {
+ 				  galleryImageUrlsOrPaths.addAll(paths);
+ 			  } else if (imageType == 'promotion') { 
+ 				  promotionImageUrlsOrPaths.addAll(paths); 
  			  }
  		  }
  	  }
  }
-
- // --- 5. ฟังก์ชันเรียก BottomSheet (Private Helper) ---
+ 
+ // (ฟังก์ชัน _showImagePickerBottomSheet)
  void _showImagePickerBottomSheet({required String imageType}) {
  	  Get.bottomSheet(
  		  Container(
@@ -180,38 +216,48 @@ class RestaurantEditDetailController extends GetxController {
  	  );
  }
 
- // --- 6. ฟังก์ชันปุ่มกดเลือกรูป (Public Access Functions) ---
+ // (ฟังก์ชันปุ่มกดเลือกรูป)
  void pickCoverImage() => _showImagePickerBottomSheet(imageType: 'cover');
- void addMenuImages() => _showImagePickerBottomSheet(imageType: 'menu');
- void addPromotion() => _showImagePickerBottomSheet(imageType: 'promotion');
+ void addGalleryImage() => _showImagePickerBottomSheet(imageType: 'gallery'); 
+ void addPromotionImage() => _showImagePickerBottomSheet(imageType: 'promotion'); 
 
- // --- 7. ฟังก์ชันลบรูป (Public Access Functions) ---
+ // (ฟังก์ชันลบรูป)
  void removeCoverImage() => coverImageUrlOrPath.value = '';
- void removeMenuImage(int index) {
- 	  if (index >= 0 && index < menuImageUrlsOrPaths.length) {
- 		  menuImageUrlsOrPaths.removeAt(index);
+ void removeGalleryImage(int index) { 
+ 	  if (index >= 0 && index < galleryImageUrlsOrPaths.length) {
+ 		  galleryImageUrlsOrPaths.removeAt(index);
  	  }
  }
- void removeBannerImage(int index) {
- 	  if (index >= 0 && index < bannerImageUrlsOrPaths.length) {
- 		  bannerImageUrlsOrPaths.removeAt(index);
+ void removePromotionImage(int index) { 
+ 	  if (index >= 0 && index < promotionImageUrlsOrPaths.length) {
+ 		  promotionImageUrlsOrPaths.removeAt(index);
  	  }
+ }
+ 
+ // (ฟังก์ชัน Menu Field)
+ void addMenuItemField() {
+    menuControllers.add(MenuItemController());
+ }
+ void removeMenuItemField(int index) {
+    if (index >= 0 && index < menuControllers.length) {
+      menuControllers[index].dispose();
+      menuControllers.removeAt(index);
+    }
  }
 
- // --- 8. ฟังก์ชันจัดการ BannerType & Text Field (Public Access Functions) ---
+ // (ฟังก์ชันจัดการ BannerType)
  void setBannerType(BannerType type) {
  	selectedBannerType.value = type;
  	if (type == BannerType.image) {
  		for (var controller in bannerTextControllers) { controller.dispose(); }
  		bannerTextControllers.clear();
  	} else {
- 		bannerImageUrlsOrPaths.clear();
+ 		promotionImageUrlsOrPaths.clear(); 
  		final foundRestaurant = restaurantToEdit.value;
  		if(foundRestaurant != null && !foundRestaurant.promotion.any((url) => url.startsWith('http'))){
  			for (var controller in bannerTextControllers) { controller.dispose(); }
  			bannerTextControllers.assignAll(foundRestaurant.promotion.map((text) => TextEditingController(text: text)).toList());
  		} else if(bannerTextControllers.isEmpty) { 
-            // กรณี Add New: ถ้าไม่มี fields เลย ให้เพิ่ม 1 field
             bannerTextControllers.add(TextEditingController());
         }
  	}
@@ -226,7 +272,7 @@ class RestaurantEditDetailController extends GetxController {
  	}
  }
 
- // --- 9. ฟังก์ชันอัปโหลดรูป (Private Helper) ---
+ // (ฟังก์ชันอัปโหลดรูป)
  Future<String?> _uploadRestaurantImage(String imagePath, String restaurantIdStr, String imageTypeFolder) async {
  	  try {
  		  final file = File(imagePath);
@@ -249,7 +295,7 @@ class RestaurantEditDetailController extends GetxController {
  	  }
  }
 
- // --- 10. ฟังก์ชันลบรูป (Private Helper) ---
+ // (ฟังก์ชันลบรูป)
  Future<void> _deleteRestaurantImages(List<String> urlsToDelete) async {
  	  if (urlsToDelete.isEmpty) return;
  	  List<String> pathsToDelete = [];
@@ -276,7 +322,7 @@ class RestaurantEditDetailController extends GetxController {
  	  } else { print("No valid paths found to delete from storage."); }
  }
 
- // --- 11. saveChanges (Edit Mode) ---
+ // --- [TASK 16.11a - 4. แก้ไข] saveChanges (Edit Mode)
  Future<void> saveChanges() async {
  	if (restaurantToEdit.value == null) return;
  	isLoading.value = true;
@@ -289,7 +335,7 @@ class RestaurantEditDetailController extends GetxController {
  	final String newLocationText = locationController.text;
  	bool locationChanged = (newLatitude != _originalLatitude || newLongitude != _originalLongitude || newLocationText != _originalLocationText);
 
- 	// (ประมวลผลรูปภาพ - เหมือนเดิม)
+ 	// (ประมวลผลรูปภาพ - Cover Image)
  	List<String> urlsToDeleteFromStorage = [];
  	bool uploadErrorOccurred = false;
  	String? finalCoverImageUrl = _originalCoverImageUrl;
@@ -303,40 +349,57 @@ class RestaurantEditDetailController extends GetxController {
  		urlsToDeleteFromStorage.add(_originalCoverImageUrl!);
  		finalCoverImageUrl = null;
  	}
- 	List<String> finalMenuImageUrls = [];
- 	List<String> newMenuPathsToUpload = [];
+  
+  // (ประมวลผล Menu Items (Text))
+  List<Map<String, dynamic>> finalMenuItemsData = [];
+  for (var menuCtrl in menuControllers) {
+      final String name = menuCtrl.nameController.text.trim();
+      final double price = double.tryParse(menuCtrl.priceController.text.trim()) ?? 0.0;
+      if (name.isNotEmpty) {
+          finalMenuItemsData.add({
+            'name': name,
+            'price': price,
+          });
+      }
+  }
+
+  // (การประมวลผล Gallery)
+ 	List<String> finalGalleryUrls = []; 
  	if (!uploadErrorOccurred) {
- 		for (var urlOrPath in menuImageUrlsOrPaths) {
- 			if (urlOrPath.startsWith('http')) { finalMenuImageUrls.add(urlOrPath); }
- 			else if (File(urlOrPath).existsSync()) { newMenuPathsToUpload.add(urlOrPath); }
+ 		List<String> newGalleryPathsToUpload = []; 
+ 		for (var urlOrPath in galleryImageUrlsOrPaths) { 
+ 			if (urlOrPath.startsWith('http')) { finalGalleryUrls.add(urlOrPath); }
+ 			else if (File(urlOrPath).existsSync()) { newGalleryPathsToUpload.add(urlOrPath); } 
  		}
- 		for (var path in newMenuPathsToUpload) {
- 			final uploadedUrl = await _uploadRestaurantImage(path, restaurantIdStr, 'menus');
- 			if (uploadedUrl != null) { finalMenuImageUrls.add(uploadedUrl); }
+ 		for (var path in newGalleryPathsToUpload) { 
+ 			final uploadedUrl = await _uploadRestaurantImage(path, restaurantIdStr, 'gallery'); 
+ 			if (uploadedUrl != null) { finalGalleryUrls.add(uploadedUrl); }
  			else { uploadErrorOccurred = true; break; }
  		}
- 		for (var originalUrl in _originalMenuImageUrls) {
- 			if (!finalMenuImageUrls.contains(originalUrl)) { urlsToDeleteFromStorage.add(originalUrl); }
+ 		for (var originalUrl in _originalGalleryImageUrls) { 
+ 			if (!finalGalleryUrls.contains(originalUrl)) { urlsToDeleteFromStorage.add(originalUrl); }
  		}
  	}
- 	List<String> finalBannerUrls = [];
+
+  // (การประมวลผล Promotion)
+ 	List<String> finalPromotionUrlsOrText = []; 
  	if (!uploadErrorOccurred && selectedBannerType.value == BannerType.image) {
- 		List<String> newBannerPathsToUpload = [];
- 		for (var urlOrPath in bannerImageUrlsOrPaths) {
- 			if (urlOrPath.startsWith('http')) { finalBannerUrls.add(urlOrPath); }
- 			else if (File(urlOrPath).existsSync()) { newBannerPathsToUpload.add(urlOrPath); }
+ 		List<String> newPromotionPathsToUpload = []; 
+ 		for (var urlOrPath in promotionImageUrlsOrPaths) { 
+ 			if (urlOrPath.startsWith('http')) { finalPromotionUrlsOrText.add(urlOrPath); }
+ 			else if (File(urlOrPath).existsSync()) { newPromotionPathsToUpload.add(urlOrPath); } 
  		}
- 		for (var path in newBannerPathsToUpload) {
- 			final uploadedUrl = await _uploadRestaurantImage(path, restaurantIdStr, 'promotions');
- 			if (uploadedUrl != null) { finalBannerUrls.add(uploadedUrl); }
+ 		for (var path in newPromotionPathsToUpload) { 
+ 			final uploadedUrl = await _uploadRestaurantImage(path, restaurantIdStr, 'promotions'); 
+ 			if (uploadedUrl != null) { finalPromotionUrlsOrText.add(uploadedUrl); }
  			else { uploadErrorOccurred = true; break; }
  		}
- 		for (var originalUrl in _originalBannerImageUrls) {
- 			if (!finalBannerUrls.contains(originalUrl)) { urlsToDeleteFromStorage.add(originalUrl); }
+ 		for (var originalUrl in _originalPromotionImageUrls) { 
+ 			if (!finalPromotionUrlsOrText.contains(originalUrl)) { urlsToDeleteFromStorage.add(originalUrl); }
  		}
  	} else if (selectedBannerType.value == BannerType.text) {
- 		finalBannerUrls = bannerTextControllers.map((controller) => controller.text.trim()).where((text) => text.isNotEmpty).toList();
- 		urlsToDeleteFromStorage.addAll(_originalBannerImageUrls);
+ 		finalPromotionUrlsOrText = bannerTextControllers.map((controller) => controller.text.trim()).where((text) => text.isNotEmpty).toList(); 
+ 		urlsToDeleteFromStorage.addAll(_originalPromotionImageUrls); 
  	}
 
  	if (uploadErrorOccurred) {
@@ -345,23 +408,25 @@ class RestaurantEditDetailController extends GetxController {
  		return;
  	}
 
- 	// --- 12. เตรียมข้อมูล (เปลี่ยน 'description_inside' เป็น 'detail') ---
+ 	// --- [TASK 16.11a - 5. แก้ไข] commonUpdateData
  	Map<String, dynamic> commonUpdateData = {
  		'res_name': restaurantNameController.text.trim(),
  		'description': descriptionController.text.trim().isEmpty ? null : descriptionController.text.trim(),
- 		// 'description_inside': detailController.text.trim().isEmpty ? null : detailController.text.trim(), // <<<--- แก้ไข
- 		'detail': detailController.text.trim().isEmpty ? null : detailController.text.trim(), // <<<--- TASK 3
+ 		'detail': detailController.text.trim().isEmpty ? null : detailController.text.trim(), 
  		'opening_hours': openingHoursController.text.trim().isEmpty ? null : openingHoursController.text.trim(),
  		'phone_no': phoneNumberController.text.trim().isEmpty ? null : phoneNumberController.text.trim(),
- 		'food_type': typeController.text.trim().isEmpty ? null : typeController.text.trim(), // food_type (Text)
+ 		'food_type': typeController.text.trim().isEmpty ? null : typeController.text.trim(), 
  		'res_img': finalCoverImageUrl,
- 		'promo_imgs_urls': finalBannerUrls,
+    'gallery_imgs_urls': finalGalleryUrls, 
+ 		'promo_imgs_urls': finalPromotionUrlsOrText, 
  		'is_open': restaurantToEdit.value!.isOpen.value,
+    'has_delivery': hasDelivery.value, // <<< [เพิ่ม]
+    'has_dine_in': hasDineIn.value,   // <<< [เพิ่ม]
  	};
 
  	try {
  		if (locationChanged) {
- 			// (Insert restaurant_edits - เหมือนเดิม)
+ 			// --- [TASK 16.11a - 6. แก้ไข] proposed_data
  			await supabase.from('restaurant_edits').insert({
  				'user_id': supabase.auth.currentUser!.id,
  				'res_id': restaurantIdStr,
@@ -370,43 +435,36 @@ class RestaurantEditDetailController extends GetxController {
  					'latitude': newLatitude,
  					'longitude': newLongitude,
  					'location': newLocationText.trim().isEmpty ? null : newLocationText.trim(),
- 					...commonUpdateData
+ 					...commonUpdateData,
+          'menus': finalMenuItemsData, 
  				},
  				'status': 'pending',
  			});
  			await supabase.from('restaurants').update(commonUpdateData).eq('id', restaurantIdStr);
- 			_updateLocalData(commonUpdateData, locationChanged: true, menuUrls: finalMenuImageUrls);
+      await _updateMenus(restaurantIdStr, finalMenuItemsData); 
+ 			_updateLocalData(commonUpdateData, locationChanged: true, menuData: finalMenuItemsData);
+      
+      await _deleteRestaurantImages(urlsToDeleteFromStorage); 
+ 			Get.back(); 
  			Get.snackbar('ส่งคำขอสำเร็จ', 'คำขอแก้ไขตำแหน่งร้านได้ถูกส่งให้ Admin ตรวจสอบแล้ว ข้อมูลอื่นๆ ถูกบันทึกแล้ว');
 
  		} else {
- 			// (Update restaurants - เหมือนเดิม)
+ 			// (Update restaurants)
  			await supabase.from('restaurants').update({
  				...commonUpdateData,
  				if (newLocationText != _originalLocationText)
  					'location': newLocationText.trim().isEmpty ? null : newLocationText.trim(),
  			}).eq('id', restaurantIdStr);
- 			_updateLocalData(commonUpdateData, locationChanged: false, menuUrls: finalMenuImageUrls);
+      
+      await _updateMenus(restaurantIdStr, finalMenuItemsData);
+ 			_updateLocalData(commonUpdateData, locationChanged: false, menuData: finalMenuItemsData);
+      await _deleteRestaurantImages(urlsToDeleteFromStorage);
+ 			
+      Get.back();
  			Get.snackbar('สำเร็จ', 'บันทึกข้อมูลร้านค้าเรียบร้อยแล้ว');
-    500.milliseconds.delay(); 
-    Get.back();
  		}
 
- 		// --- 13. อัปเดตเมนู (FIX: ห่อ URL ใน List<String> สำหรับ img_url) ---
- 		await supabase.from('menus').delete().eq('res_id', restaurantIdStr);
- 		if (finalMenuImageUrls.isNotEmpty) {
- 			final List<Map<String, dynamic>> newMenusData = finalMenuImageUrls.map((url) => {
- 				'res_id': restaurantIdStr,
- 				'img_url': [url], // <<<--- FIX: ห่อ URL ด้วย List[]
- 				'name': 'เมนู',
- 				'price': 0
- 			}).toList();
- 			await supabase.from('menus').insert(newMenusData);
- 		}
-
- 		await _deleteRestaurantImages(urlsToDeleteFromStorage); // ลบรูปเก่า
- 		Get.back(); // กลับหน้า Detail
-
- 		// (รีเฟรชหน้า Detail - เหมือนเดิม)
+ 		// (รีเฟรชหน้า Detail)
  		if (Get.isRegistered<RestaurantDetailController>(tag: restaurantId)) {
  			final detailController = Get.find<RestaurantDetailController>(tag: restaurantId);
  			detailController.restore();
@@ -431,23 +489,47 @@ class RestaurantEditDetailController extends GetxController {
  }
 
 
-  // --- 14. _updateLocalData (อัปเดต detail) ---
- void _updateLocalData(Map<String, dynamic> updatedData, {required bool locationChanged, required List<String> menuUrls}) {
+  // (Helper _updateMenus)
+  Future<void> _updateMenus(String restaurantIdStr, List<Map<String, dynamic>> newMenusData) async {
+      await supabase.from('menus').delete().eq('res_id', restaurantIdStr);
+ 		  if (newMenusData.isNotEmpty) {
+ 			  final List<Map<String, dynamic>> newMenusWithId = newMenusData.map((menu) {
+            return {
+              ...menu,
+              'res_id': restaurantIdStr, 
+            };
+        }).toList();
+ 			  await supabase.from('menus').insert(newMenusWithId);
+ 		  }
+  }
+
+  // --- [TASK 16.11a - 7. แก้ไข] _updateLocalData
+ void _updateLocalData(Map<String, dynamic> updatedData, {required bool locationChanged, required List<Map<String, dynamic>> menuData}) {
  	 final currentRestaurant = restaurantToEdit.value;
  	 if (currentRestaurant == null) return;
 
+   final List<MenuItem> updatedMenuItems = menuData.map((map) {
+      return MenuItem.fromMap({ 
+        'id': 0, 
+        'name': map['name'],
+        'price': map['price'],
+      });
+   }).toList();
+   
  	 final updatedRestaurantModel = currentRestaurant.copyWith(
  	   restaurantName: updatedData['res_name'],
  	   description: updatedData['description'],
- 	   // detail: updatedData['description_inside'], // <<<--- แก้ไข
- 	   detail: updatedData['detail'], // <<<--- TASK 3
+ 	   detail: updatedData['detail'], 
  	   openingHours: updatedData['opening_hours']?.toString(),
  	   phoneNumber: updatedData['phone_no'],
- 	   type: updatedData['food_type'], // type (String?)
+ 	   type: updatedData['food_type'], 
  	   imageUrl: updatedData['res_img'],
  	   promotion: List<String>.from(updatedData['promo_imgs_urls'] ?? []),
+     galleryImages: List<String>.from(updatedData['gallery_imgs_urls'] ?? []), 
  	   isOpen: updatedData['is_open'],
- 	   menuImages: menuUrls,
+     hasDelivery: updatedData['has_delivery'], // <<< [เพิ่ม]
+     hasDineIn: updatedData['has_dine_in'],   // <<< [เพิ่ม]
+ 	   menuItems: updatedMenuItems,
  	   latitude: locationChanged ? currentRestaurant.latitude : (double.tryParse(latitudeController.text) ?? currentRestaurant.latitude),
  	   longitude: locationChanged ? currentRestaurant.longitude : (double.tryParse(longitudeController.text) ?? currentRestaurant.longitude),
  	   location: locationChanged ? currentRestaurant.location : locationController.text,
@@ -457,15 +539,34 @@ class RestaurantEditDetailController extends GetxController {
  	
  	 coverImageUrlOrPath.value = updatedRestaurantModel.imageUrl ?? '';
  	 _originalCoverImageUrl = updatedRestaurantModel.imageUrl;
- 	 menuImageUrlsOrPaths.assignAll(updatedRestaurantModel.menuImages);
- 	 _originalMenuImageUrls = List.from(updatedRestaurantModel.menuImages);
+   
+    // (อัปเดต menuControllers)
+    for (var controller in menuControllers) { controller.dispose(); }
+    menuControllers.assignAll(updatedMenuItems.map((item) {
+        return MenuItemController(
+          name: item.name,
+          price: item.price > 0 ? item.price.toStringAsFixed(0) : '',
+          originalId: item.id
+        );
+    }).toList());
+    
+    // (อัปเดต Gallery)
+    galleryImageUrlsOrPaths.assignAll(updatedRestaurantModel.galleryImages); 
+    _originalGalleryImageUrls = List.from(updatedRestaurantModel.galleryImages); 
+
+    // <<<--- [TASK 16.11a - 8. เพิ่ม] อัปเดต State Checkboxes
+    hasDelivery.value = updatedRestaurantModel.hasDelivery;
+    hasDineIn.value = updatedRestaurantModel.hasDineIn;
+    // <<<--- [สิ้นสุดการเพิ่ม]
+
  	 if (selectedBannerType.value == BannerType.image) {
- 	   bannerImageUrlsOrPaths.assignAll(updatedRestaurantModel.promotion);
- 	   _originalBannerImageUrls = List.from(updatedRestaurantModel.promotion);
+ 	   promotionImageUrlsOrPaths.assignAll(updatedRestaurantModel.promotion); 
+ 	   _originalPromotionImageUrls = List.from(updatedRestaurantModel.promotion); 
  	 } else {
  		 for (var controller in bannerTextControllers) { controller.dispose(); }
  		 bannerTextControllers.assignAll(updatedRestaurantModel.promotion.map((text) => TextEditingController(text: text)).toList());
  	 }
+    
  	 if (!locationChanged) {
  		 _originalLatitude = updatedRestaurantModel.latitude;
  		 _originalLongitude = updatedRestaurantModel.longitude;

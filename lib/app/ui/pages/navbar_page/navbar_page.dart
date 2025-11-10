@@ -49,7 +49,12 @@ class NavbarPage extends GetView<NavbarController> {
       stateManagement: true, // <<<--- ให้ PersistentTabView จัดการ State ของแต่ละหน้า
       backgroundColor: Colors.white, // <<<--- สีพื้นหลังของเนื้อหาข้างบน TabBar
       // handleAndroidBackButtonPress: true, // จัดการปุ่ม Back ของ Android (ถ้าต้องการ)
-      // resizeToAvoidBottomInset: true, // ปรับขนาดเมื่อ Keyboard แสดง (สำคัญ!)
+      
+      // <<<--- [TASK 11.1 - แก้ไข] ---
+      // เปิดใช้งาน (Uncomment) บรรทัดนี้
+      resizeToAvoidBottomInset: true, // ปรับขนาดเมื่อ Keyboard แสดง (สำคัญ!)
+      // <<<--- [สิ้นสุดการแก้ไข] ---
+      
       // hideNavigationBarWhenKeyboardShows: true, // ซ่อน Navbar เมื่อ Keyboard แสดง (ถ้าต้องการ)
     );
   }

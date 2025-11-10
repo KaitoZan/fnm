@@ -1,6 +1,8 @@
 // lib/app/ui/pages/restaurant_detail_page/widgets/detail_menu_ctrl.dart
 import 'dart:io';
 import 'package:flutter/material.dart';
+// <<<--- [TASK 12.3 - เพิ่ม] Import
+import 'package:cached_network_image/cached_network_image.dart';
 
 class DetailMenuCtrl extends StatelessWidget {
   final String imageUrl;
@@ -17,34 +19,44 @@ class DetailMenuCtrl extends StatelessWidget {
     // --- ตรวจสอบว่าเป็น URL หรือไม่ ---
     if (imageUrl.startsWith('http')) {
       // --- ถ้าเป็น URL จากอินเทอร์เน็ต (Supabase) ---
-      return Image.network(
-        imageUrl,
+      
+      // <<<--- [TASK 12.3 - เริ่มแก้ไข] ---
+      // (ลบ Image.network)
+      // return Image.network(
+      //   imageUrl,
+      //   fit: fit,
+      //   loadingBuilder: (context, child, loadingProgress) {
+      //     ...
+      //   },
+      //   errorBuilder: (context, error, stackTrace) {
+      //     ...
+      //   }
+      // );
+      
+      // (ใช้ CachedNetworkImage แทน)
+      return CachedNetworkImage(
+        imageUrl: imageUrl,
         fit: fit,
-        // เพิ่ม Loading Builder เพื่อแสดงสถานะกำลังโหลด
-        loadingBuilder: (context, child, loadingProgress) {
-          if (loadingProgress == null) return child; // โหลดเสร็จแล้ว แสดงรูปภาพ
-          return Center(
-            child: CircularProgressIndicator(
-              // คำนวณ % การโหลด (ถ้าต้องการ)
-              // value: loadingProgress.expectedTotalBytes != null
-              //     ? loadingProgress.cumulativeBytesLoaded / loadingProgress.expectedTotalBytes!
-              //     : null,
-              strokeWidth: 2, // ขนาดเส้นเล็กลง
-              color: Colors.pink.shade200, // สี Loading
-            ),
+        // (แสดงสถานะกำลังโหลด)
+        placeholder: (context, url) => Center(
+          child: CircularProgressIndicator(
+            strokeWidth: 2, 
+            color: Colors.pink.shade200, 
+          ),
+        ),
+        // (แสดง Placeholder ถ้าโหลดไม่ได้)
+        errorWidget: (context, url, error) {
+          print("Error loading image: $imageUrl, Error: $error"); // แสดง Error ใน Console
+          return Container( // แสดง Container สีเทาพร้อมไอคอนแทน
+            color: Colors.grey[200],
+            child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
           );
         },
-        // เพิ่ม Error Builder เพื่อแสดง Placeholder ถ้าโหลดไม่ได้
-        errorBuilder: (context, error, stackTrace) {
-           print("Error loading image: $imageUrl, Error: $error"); // แสดง Error ใน Console
-           return Container( // แสดง Container สีเทาพร้อมไอคอนแทน
-              color: Colors.grey[200],
-              child: const Center(child: Icon(Icons.broken_image, color: Colors.grey)),
-           );
-        }
       );
+      // <<<--- [TASK 12.3 - สิ้นสุดการแก้ไข] ---
+
     }
-    // --- โค้ดเดิมสำหรับ Asset และ File (อาจจะไม่ค่อยได้ใช้แล้ว แต่เก็บไว้เผื่อ) ---
+    // --- โค้ดเดิมสำหรับ Asset และ File (เหมือนเดิม) ---
     else if (imageUrl.startsWith('assets/')) {
       // กรณีเป็นไฟล์ asset
       return Image.asset(
@@ -69,11 +81,6 @@ class DetailMenuCtrl extends StatelessWidget {
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Icon(Icons.image_not_supported, color: Colors.grey[600]), // แสดงไอคอนแทน Text
-        // child: Text(
-        //   imageUrl.isNotEmpty ? 'Invalid Path/URL' : 'No Image',
-        //   textAlign: TextAlign.center,
-        //   style: const TextStyle(color: Colors.black54, fontSize: 10),
-        // ),
       ),
     );
   }

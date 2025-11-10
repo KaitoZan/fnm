@@ -32,12 +32,15 @@ class Showshopcard extends StatelessWidget {
                 ),
               );
           }
-          // --- แสดง List ร้านค้า ---
-          return Column(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: controller.myOwnerShopList.asMap().entries.map((entry) {
-              final index = entry.key;
-              final restaurant = entry.value;
+          
+          // <<<--- [TASK 17.2 - เริ่มแก้ไข] ---
+          // (เปลี่ยนเป็น ListView.builder จาก Task 12.1)
+          return ListView.builder(
+            itemCount: controller.myOwnerShopList.length,
+            physics: const NeverScrollableScrollPhysics(), // <<< (จาก Task 15)
+            shrinkWrap: true, // <<< (จาก Task 12.1)
+            itemBuilder: (context, index) {
+              final restaurant = controller.myOwnerShopList[index];
               return Column(
                 children: [
                   // ใช้ MyShopCard แสดงผล
@@ -47,7 +50,12 @@ class Showshopcard extends StatelessWidget {
                     description: restaurant.description,
                     rating: restaurant.rating,
                     isOpen: restaurant.isOpen, // ส่ง RxBool
-                    showMotorcycleIcon: restaurant.showMotorcycleIcon,
+                    
+                    // <<< [แก้ไข]
+                    // showMotorcycleIcon: restaurant.showMotorcycleIcon, // (ลบ)
+                    hasDelivery: restaurant.hasDelivery, // (เพิ่ม)
+                    hasDineIn: restaurant.hasDineIn, // (เพิ่ม)
+                    
                     shopId: restaurant.id, // ส่ง String ID
                     onTap: () {
                       // --- แก้ไข: ใช้ restaurant.id ตรงๆ (ไม่ต้อง .toString()) ---
@@ -63,8 +71,9 @@ class Showshopcard extends StatelessWidget {
                     const SizedBox(height: 80), // <<<--- เพิ่ม const
                 ],
               );
-            }).toList(),
+            },
           );
+          // <<<--- [TASK 17.2 - สิ้นสุดการแก้ไข] ---
       }
     );
   }

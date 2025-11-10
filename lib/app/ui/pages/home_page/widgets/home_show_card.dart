@@ -27,28 +27,38 @@ class ShowCardHome extends StatelessWidget {
           ),
         );
       }
-      // แสดง List ร้านอาหาร
-      return Column(
-        children: filterController.filteredRestaurantList.map((restaurant) {
+      
+      // <<<--- [TASK 16.6 - เริ่มแก้ไข] ---
+      return ListView.builder(
+        itemCount: filterController.filteredRestaurantList.length,
+        physics: const NeverScrollableScrollPhysics(), 
+        shrinkWrap: true, 
+        itemBuilder: (context, index) {
+          final restaurant = filterController.filteredRestaurantList[index];
           return HomeRestaurantCard(
             imageUrl: restaurant.imageUrl,
             restaurantName: restaurant.restaurantName,
             description: restaurant.description,
             rating: restaurant.rating,
-            isOpen: restaurant.isOpen, // ส่ง RxBool ไปตรงๆ
-            showMotorcycleIcon: restaurant.showMotorcycleIcon,
-            distanceInMeters: restaurant.distanceInMeters, // <<<--- [เพิ่ม] ส่งระยะทาง
+            isOpen: restaurant.isOpen, 
+            
+            // <<< [แก้ไข]
+            // showMotorcycleIcon: restaurant.showMotorcycleIcon,
+            hasDelivery: restaurant.hasDelivery,
+            hasDineIn: restaurant.hasDineIn, // <<< [เพิ่ม]
+
+            distanceInMeters: restaurant.distanceInMeters, 
             onTap: () {
-                // --- แก้ไข: ใช้ restaurant.id ตรงๆ (ไม่ต้อง .toString()) ---
-                final String restaurantIdString = restaurant.id; // <<<--- แก้ไข
+                final String restaurantIdString = restaurant.id; 
                 Get.toNamed(
-                  AppRoutes.RESTAURANTDETAIL + '/$restaurantIdString', // ใช้ String ID ใน Route Name
-                  parameters: {'restaurantId': restaurantIdString}, // ส่ง parameters เป็น String ID
+                  AppRoutes.RESTAURANTDETAIL + '/$restaurantIdString', 
+                  parameters: {'restaurantId': restaurantIdString}, 
                 );
             },
           );
-        }).toList(),
+        },
       );
+      // <<<--- [TASK 16.6 - สิ้นสุดการแก้ไข] ---
     });
   }
 }

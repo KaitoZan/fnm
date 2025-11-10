@@ -33,9 +33,14 @@ class SlideController extends GetxController {
     pageController = PageController(initialPage: _initialPageIndex);
     currentPage.value = _initialPageIndex;
 
-    // --- 3. Listener: กรองและสุ่ม Banner เมื่อร้านอาหารโหลดเสร็จ ---
-    // รัน _updateBanners เมื่อ allRestaurantsObservable มีการเปลี่ยนแปลง
+    // --- [TASK 14 - เริ่มแก้ไข] ---
+    // 1. รัน _updateBanners เมื่อ allRestaurantsObservable มีการเปลี่ยนแปลง (สำหรับอนาคต)
     ever(_filterController.allRestaurantsObservable, (_) => _updateBanners());
+    
+    // 2. รัน _updateBanners ทันที 1 ครั้ง
+    // เพื่อดึงข้อมูลที่ FilterController โหลดเสร็จแล้วตั้งแต่ตอน Splash
+    _updateBanners();
+    // --- [TASK 14 - สิ้นสุดการแก้ไข] ---
   }
 
   // --- 4. ฟังก์ชันสำหรับกรอง, สุ่ม และอัปเดต Banner ---

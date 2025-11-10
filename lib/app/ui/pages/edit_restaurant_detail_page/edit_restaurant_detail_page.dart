@@ -1,10 +1,11 @@
 // lib/app/ui/pages/edit_restaurant_detail_page/edit_restaurant_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+// import 'package:get/state_manager.dart'; // ไม่จำเป็น
 
 import '../../global_widgets/back3_bt.dart';
 import '../../global_widgets/bt_scrolltop.dart';
-import '../restaurant_detail_page/widgets/scrollctrl.dart'; 
+import '../restaurant_detail_page/widgets/scrollctrl.dart'; // Import ScrollpageController
 import 'edit_restaurant_detail_controller.dart';
 import 'widgets/eddt_form_edit.dart';
 import 'widgets/eddt_head_text.dart';
@@ -13,6 +14,7 @@ import 'widgets/eddt_save_bt.dart';
 
 class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> {
   final String restaurantId;
+  // ใช้ const constructor
   const EditRestaurantDetailsPage({super.key, required this.restaurantId});
 
   @override
@@ -28,6 +30,7 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(), 
       child: Scaffold(
+        // (AppBar ... เหมือนเดิม)
         appBar: AppBar(
           backgroundColor: Colors.pink[200],
           leading: const Back3Bt(), 
@@ -44,6 +47,7 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
             ),
           ),
         ),
+        // (Body ... Stack ... Container ... Column ... เหมือนเดิม)
         body: Stack( 
           children: [
             Container(
@@ -84,7 +88,7 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
                                 const EdDtHeadText(), 
                                 const SizedBox(height: 20),
                                 
-                                // --- [แก้ไข] (แก้บั๊ก Get.find [image_148c23.png]) ---
+                                // --- [แก้ไข] ---
                                 // ส่ง 'controller' (ที่ได้จาก GetView) เข้าไป
                                 EddtFormEdit(
                                   restaurantId: restaurantId,
@@ -102,6 +106,7 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
               ),
             ),
 
+            // (BtScrollTop ... Positioned ... EddtSaveBt ... เหมือนเดิม)
             BtScrollTop(tag: scrollTag), 
             Positioned(
               bottom: 16,

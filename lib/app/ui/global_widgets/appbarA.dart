@@ -2,6 +2,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
+// <<<--- [TASK 12.3 - เพิ่ม] Import
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../routes/app_routes.dart';
 import '../pages/login_page/login_controller.dart';
@@ -39,36 +41,28 @@ class AppbarA extends StatelessWidget implements PreferredSizeWidget {
             return Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: PopupMenuButton<String>(
-                // --- [แก้ไข] ---
+                // --- (onSelected ... เหมือนเดิม) ---
                 onSelected: (String result) async { 
-                  // เคลียร์ Focus ก่อน Navigate
                   filterController.clearSearchFocus(tag);
                   FocusScope.of(context).unfocus();
-                  await Future.delayed(const Duration(milliseconds: 100)); // รอเล็กน้อย
+                  await Future.delayed(const Duration(milliseconds: 100)); 
 
-                  // Navigate ตามค่าที่เลือก
                   if (result == 'profile') {
                     Get.toNamed(AppRoutes.MYPROFILE);
                   } else if (result == 'setting') {
                     Get.toNamed(AppRoutes.SETTING);
                   } else if (result == 'logout') {
-                    
-                    // เพิ่ม Delay เล็กน้อยเพื่อให้ PopupMenu ปิดตัวก่อน
                     await Future.delayed(const Duration(milliseconds: 50)); 
-                    
-                    // 1. await การ logout (ซึ่งจะไปเรียก _clearUserData)
                     await loginController.logout(); 
-                    // 2. สั่ง Navigation จาก UI เอง
                     Get.offAllNamed(AppRoutes.LOGIN);
                   }
                 },
-                // --- [สิ้นสุดการแก้ไข] ---
-                color: Colors.pink[50], // สีพื้นหลัง Popup
+                // --- (itemBuilder ... เหมือนเดิม) ---
+                color: Colors.pink[50], 
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15.0),
                 ),
-                offset: const Offset(0, 50), // ตำแหน่ง Popup
-                // --- itemBuilder สร้างเมนู ---
+                offset: const Offset(0, 50), 
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                   const PopupMenuItem<String>(value: 'profile', child: Text('ดูหน้าโปรไฟล์')),
                   const PopupMenuItem<String>(value: 'setting', child: Text('การตั้งค่า')),
@@ -86,23 +80,33 @@ class AppbarA extends StatelessWidget implements PreferredSizeWidget {
                       final imageUrl = loginController.userProfileImageUrl.value;
                       // ตรวจสอบว่าเป็น URL หรือ Asset หรือ ค่าว่าง
                       if (imageUrl.startsWith('http')) {
-                          // ถ้าเป็น URL ใช้ Image.network
+                          // <<<--- [TASK 12.3 - เริ่มแก้ไข] ---
+                          // (ลบ Image.network)
+                          // return ClipOval(
+                          //     child: Image.network(
+                          //         imageUrl,
+                          //         ...
+                          //     )
+                          // );
+                          
+                          // (ใช้ CachedNetworkImage แทน)
                           return ClipOval(
-                              child: Image.network(
-                                  imageUrl,
-                                  fit: BoxFit.cover,
-                                  width: 40, // ขนาดเท่ากับ radius * 2
-                                  height: 40,
-                                  // เพิ่ม Loading/Error Builder
-                                  loadingBuilder: (context, child, progress) => progress == null ? child : const Center(child: CircularProgressIndicator(strokeWidth: 1)),
-                                  errorBuilder: (context, error, stack) => const Icon(Icons.person, color: Colors.white),
-                              )
+                            child: CachedNetworkImage(
+                              imageUrl: imageUrl,
+                              fit: BoxFit.cover,
+                              width: 40,
+                              height: 40,
+                              placeholder: (context, url) => const Center(child: CircularProgressIndicator(strokeWidth: 1)),
+                              errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.white),
+                            ),
                           );
+                          // <<<--- [TASK 12.3 - สิ้นสุดการแก้ไข] ---
+                          
                       } else if (imageUrl.startsWith('assets/')) {
-                          // ถ้าเป็น Asset ใช้ Image.asset
+                          // ถ้าเป็น Asset ใช้ Image.asset (เหมือนเดิม)
                           return ClipOval(child: Image.asset(imageUrl, fit: BoxFit.cover, width: 40, height: 40));
                       } else {
-                          // ถ้าเป็นค่าว่าง หรือ Path เก่า (ที่ไม่ควรมีแล้ว) แสดงไอคอน Default
+                          // ถ้าเป็นค่าว่าง
                           return const Icon(Icons.person, color: Colors.white);
                       }
                   }),

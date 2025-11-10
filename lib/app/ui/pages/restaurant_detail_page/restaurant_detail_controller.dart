@@ -1,13 +1,17 @@
-// lib/app/ui/pages/restaurant_detail_page/restaurant_detail_controller.dart
+// lib.zip/app/ui/pages/restaurant_detail_page/restaurant_detail_controller.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+// <<<--- [TASK 18 - เพิ่ม] Import (สำหรับ CachedNetworkImage)
+import 'package:cached_network_image/cached_network_image.dart';
+
 
 import '../../../routes/app_routes.dart';
 import '../../global_widgets/filter_ctrl.dart';
 import '../../../model/restaurant.dart'; // <<<--- Import Model ที่แก้ไขแล้ว
+import '../../../model/menu_item.dart'; // <<<--- [TASK 18 - เพิ่ม] Import (สำหรับ CommentModel)
 import '../login_page/login_controller.dart';
 
 class RestaurantDetailController extends GetxController {
@@ -274,7 +278,7 @@ class RestaurantDetailController extends GetxController {
     }
   }
 
-  // --- [เพิ่ม] ฟังก์ชันลบคอมเมนต์ (TASK 2) ---
+  // --- (ฟังก์ชันลบคอมเมนต์ (TASK 2) ... เหมือนเดิม) ---
   void deleteComment(int commentId) async {
     if (!loginController.isLoggedIn.value) {
       Get.snackbar('ข้อผิดพลาด', 'กรุณาเข้าสู่ระบบ');
@@ -347,43 +351,101 @@ class RestaurantDetailController extends GetxController {
     }
   }
 
-  // --- 7. showReportDialog (สำหรับ Comment) ---
+  // <<<--- [TASK 18 - เริ่มแก้ไข] ---
+  
+  // --- 7. (แก้ไข) showReportDialog (สำหรับ Comment) ---
   void showReportDialog(int commentId) {
-    // commentId เป็น int (bigint)
     if (!loginController.isLoggedIn.value) {
       Get.snackbar('แจ้งเตือน', 'กรุณาเข้าสู่ระบบ...');
       return;
     }
     reportReasonController.clear();
+    
+    // (ตัวแปรสำหรับจัดการ State ภายใน Dialog)
+    String? selectedReason; 
+    final String otherReasonKey = "อื่นๆ";
+    final List<String> commentReportOptions = [
+        "ข้อความหยาบคาย", 
+        "สแปม / โฆษณา", 
+        otherReasonKey
+    ];
+
     Get.defaultDialog(
       title: 'แจ้งปัญหาคอมเมนต์',
       titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('โปรดระบุเหตุผลในการแจ้งปัญหาคอมเมนต์นี้:'),
-          const SizedBox(height: 16),
-          TextField(
-            controller: reportReasonController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'เช่น เนื้อหาไม่เหมาะสม, สแปม, ...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
+      
+      // --- ใช้ StatefulBuilder เพื่อจัดการ State ของ Radio และ TextField ---
+      content: StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text('โปรดเลือกเหตุผลในการแจ้งปัญหา:'),
+              ),
+              const SizedBox(height: 8),
+              
+              // (สร้าง RadioListTile จาก List)
+              ...commentReportOptions.map((reason) {
+                return RadioListTile<String>(
+                  title: Text(reason),
+                  value: reason,
+                  groupValue: selectedReason,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedReason = value;
+                    });
+                  },
+                  dense: true,
+                );
+              }).toList(),
+              
+              // (แสดง TextField ถ้าเลือก "อื่นๆ")
+              if (selectedReason == otherReasonKey)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+                  child: TextField(
+                    controller: reportReasonController, // ใช้ Controller ของคลาสหลัก
+                    maxLines: 2,
+                    autofocus: true, // Focus ทันทีที่แสดง
+                    decoration: const InputDecoration(
+                      hintText: 'โปรดระบุเหตุผล...',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.all(12.0),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
       confirm: ElevatedButton(
         onPressed: () {
-          if (reportReasonController.text.trim().isNotEmpty) {
-            Get.back();
-            _submitReport(
-              reportReasonController.text.trim(),
-              commentId: commentId, // <<<--- ส่ง commentId
-            ); // commentId เป็น int
-          } else {
-            Get.snackbar('ข้อผิดพลาด', 'กรุณาระบุเหตุผล...');
+          // (ตรวจสอบ State ตอนกดยืนยัน)
+          if (selectedReason == null) {
+            Get.snackbar('ข้อผิดพลาด', 'กรุณาเลือกเหตุผล...');
+            return;
           }
+          
+          String finalReason;
+          if (selectedReason == otherReasonKey) {
+            if (reportReasonController.text.trim().isEmpty) {
+              Get.snackbar('ข้อผิดพลาด', 'กรุณาระบุเหตุผลในช่อง "อื่นๆ"...');
+              return;
+            }
+            // (รวมเหตุผล)
+            finalReason = "$otherReasonKey: ${reportReasonController.text.trim()}";
+          } else {
+            finalReason = selectedReason!;
+          }
+          
+          Get.back(); // ปิด Dialog
+          _submitReport(
+            finalReason, // <<< ส่งเหตุผลที่สร้างใหม่
+            commentId: commentId,
+          );
         },
         child: const Text('ส่งเรื่อง'),
         style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
@@ -395,42 +457,100 @@ class RestaurantDetailController extends GetxController {
     );
   }
 
-  // --- [เพิ่ม] showReportRestaurantDialog (สำหรับ Restaurant) ---
+  // --- 8. (แก้ไข) showReportRestaurantDialog (สำหรับ Restaurant) ---
   void showReportRestaurantDialog() {
     if (!loginController.isLoggedIn.value) {
       Get.snackbar('แจ้งเตือน', 'กรุณาเข้าสู่ระบบ...');
       return;
     }
     reportReasonController.clear();
+    
+    // (ตัวแปรสำหรับจัดการ State ภายใน Dialog)
+    String? selectedReason; 
+    final String otherReasonKey = "อื่นๆ";
+    // (ใช้เหตุผลคนละชุดกับ Comment)
+    final List<String> restaurantReportOptions = [
+        "ข้อมูลร้านไม่ถูกต้อง (เช่น เบอร์, เวลาเปิด)", 
+        "ร้านปิดถาวรแล้ว",
+        "สแปม / โฆษณา",
+        otherReasonKey
+    ];
+
     Get.defaultDialog(
-      title: 'แจ้งปัญหาร้านค้า', // <<<--- แก้ไข Title
+      title: 'แจ้งปัญหาร้านค้า', // <<< แก้ไข Title
       titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('โปรดระบุเหตุผลในการแจ้งปัญหาร้านนี้:'), // <<<--- แก้ไข Text
-          const SizedBox(height: 16),
-          TextField(
-            controller: reportReasonController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'เช่น ข้อมูลไม่ถูกต้อง, ร้านปิดถาวร, ...', // <<<--- แก้ไข Hint
-              border: OutlineInputBorder(),
-            ),
-          ),
-        ],
+      
+      // --- ใช้ StatefulBuilder ---
+      content: StatefulBuilder(
+        builder: (BuildContext context, StateSetter setState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 16.0),
+                child: Text('โปรดเลือกเหตุผลในการแจ้งปัญหา:'),
+              ),
+              const SizedBox(height: 8),
+
+              // (สร้าง RadioListTile จาก List)
+              ...restaurantReportOptions.map((reason) {
+                return RadioListTile<String>(
+                  title: Text(reason),
+                  value: reason,
+                  groupValue: selectedReason,
+                  onChanged: (value) {
+                    setState(() {
+                      selectedReason = value;
+                    });
+                  },
+                  dense: true,
+                );
+              }).toList(),
+              
+              // (แสดง TextField ถ้าเลือก "อื่นๆ")
+              if (selectedReason == otherReasonKey)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+                  child: TextField(
+                    controller: reportReasonController, // ใช้ Controller ของคลาสหลัก
+                    maxLines: 2,
+                    autofocus: true,
+                    decoration: const InputDecoration(
+                      hintText: 'โปรดระบุปัญหาที่พบ...',
+                      border: OutlineInputBorder(),
+                      contentPadding: EdgeInsets.all(12.0),
+                    ),
+                  ),
+                ),
+            ],
+          );
+        },
       ),
       confirm: ElevatedButton(
         onPressed: () {
-          if (reportReasonController.text.trim().isNotEmpty) {
-            Get.back();
-            _submitReport(
-              reportReasonController.text.trim(),
-              resId: restaurantId, // <<<--- ส่ง resId
-            );
-          } else {
-            Get.snackbar('ข้อผิดพลาด', 'กรุณาระบุเหตุผล...');
+          // (ตรวจสอบ State ตอนกดยืนยัน)
+          if (selectedReason == null) {
+            Get.snackbar('ข้อผิดพลาด', 'กรุณาเลือกเหตุผล...');
+            return;
           }
+          
+          String finalReason;
+          if (selectedReason == otherReasonKey) {
+            if (reportReasonController.text.trim().isEmpty) {
+              Get.snackbar('ข้อผิดพลาด', 'กรุณาระบุเหตุผลในช่อง "อื่นๆ"...');
+              return;
+            }
+            finalReason = "$otherReasonKey: ${reportReasonController.text.trim()}";
+          } else {
+            finalReason = selectedReason!;
+          }
+          
+          Get.back(); // ปิด Dialog
+          _submitReport(
+            finalReason, // <<< ส่งเหตุผลที่สร้างใหม่
+            resId: restaurantId,
+          );
         },
         child: const Text('ส่งเรื่อง'),
         style: ElevatedButton.styleFrom(backgroundColor: Colors.orange),
@@ -441,9 +561,10 @@ class RestaurantDetailController extends GetxController {
       ),
     );
   }
+  // <<<--- [TASK 18 - สิ้นสุดการแก้ไข] ---
 
 
-  // --- [แก้ไข] _submitReport (รองรับ cả commentId และ resId) ---
+  // --- 9. _submitReport (ไม่ต้องแก้ไข) ---
   Future<void> _submitReport(String reason, {int? commentId, String? resId}) async {
     final String currentUserId = loginController.userId.value;
     try {
@@ -451,7 +572,7 @@ class RestaurantDetailController extends GetxController {
         'reporter_id': currentUserId,
         'comment_id': commentId, // <<<--- อาจเป็น null
         'res_id': resId, // <<<--- อาจเป็น null (แต่ใน Logic นี้คือ restaurantId)
-        'reason': reason,
+        'reason': reason, // <<<--- รับ "เหตุผล" ที่สร้างใหม่
         'status': 'pending',
       });
       Get.snackbar(

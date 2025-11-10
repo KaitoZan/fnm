@@ -46,7 +46,11 @@ class FilterController extends GetxController {
     _loginController = Get.find<LoginController>();
     locationService = Get.find<LocationService>(); // <<<--- FIX: Find locationService
 
-    initializeAllRestaurants(); // โหลดร้านเริ่มต้น
+    // <<<--- [TASK 12.2 - เริ่มแก้ไข] ---
+    // ปิดการโหลดอัตโนมัติใน onInit (เราจะย้ายไปสั่งโหลดใน SplashController)
+    // initializeAllRestaurants(); 
+    // <<<--- [TASK 12.2 - สิ้นสุดการแก้ไข] ---
+
 
     // Listeners Search
     homeSearchInputController.addListener(() {
@@ -81,12 +85,12 @@ class FilterController extends GetxController {
   // โหลดร้านอาหารเริ่มต้น
   Future<void> initializeAllRestaurants() async {
     try {
-      // --- 1. Select (ใช้ menus(img_url)) ---
+      // --- 1. [TASK 16.8 - แก้ไข] Select (เพิ่ม has_dine_in) ---
       final List<Map<String, dynamic>> data = await supabase
           .from('restaurants')
           .select(
-            '*, menus(id, res_id, name, description, price, img_url)',
-          ) // <<<--- menus(..., img_url)
+            '*, gallery_imgs_urls, has_dine_in, menus(id, res_id, name, price)', // <<< [แก้ไข]
+          ) 
           .eq('status', 'approved');
 
       final List<Restaurant> tempRestaurants = data.map((map) {
@@ -295,7 +299,7 @@ class FilterController extends GetxController {
     // --- [เพิ่ม] กรองระยะทาง 15กม. (ถ้าใช้ตำแหน่ง) ---
     if (userPosition != null) {
       tempFilteredRestaurants = tempFilteredRestaurants
-          .where((r) => r.distanceInMeters <= 15000) // 15,000 เมตร
+          .where((r) => r.distanceInMeters <= 10000) // 10,000 เมตร
           .toList();
     }
     // --- [สิ้นสุด STEP 2] ---

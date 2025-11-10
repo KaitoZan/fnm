@@ -38,7 +38,8 @@ class RegisterPage extends GetView<RegisterController> {
                   children: [
                     Blurcontainer(
                       width: MediaQuery.of(context).size.width * 0.88,
-                      height: MediaQuery.of(context).size.height * 0.65,
+                      // <<<--- [TASK 11.2 - แก้ไข] ลบบรรทัด height
+                      // height: MediaQuery.of(context).size.height * 0.65,
                       padding: const EdgeInsets.all(10.0),
                       child: Column(
                         children: [

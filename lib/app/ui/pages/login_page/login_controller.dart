@@ -30,6 +30,9 @@ class LoginController extends GetxController {
 
   // Loading state (สำหรับปุ่ม Login และโหลด Profile)
   final RxBool isLoading = false.obs;
+  
+  // (State สำหรับ SplashController ... เหมือนเดิม)
+  final RxBool isLoadingProfile = true.obs;
 
   @override
   void onInit() {
@@ -39,29 +42,23 @@ class LoginController extends GetxController {
     supabase.auth.onAuthStateChange.listen((data) {
       final Session? session = data.session;
       
-      // --- [แก้ไข] ---
-      // ตรวจสอบ session และสถานะ isLoggedIn 
-      // เพื่อป้องกันการเรียก _loadUserProfile ซ้ำซ้อน
+      // (Logic การเรียก _loadUserProfile ... เหมือนเดิม)
       if (session != null && !isLoggedIn.value) {
-        isLoading.value = true; 
+        isLoadingProfile.value = true;
         _loadUserProfile(session.user);
       } 
       else if (session == null && isLoggedIn.value) {
         _clearUserData(); // เคลียร์ข้อมูล User
-        // (ลบ Get.offAllNamed ออกจากที่นี่ เพื่อแก้ปัญหา Ancestor)
       }
-      // --- [สิ้นสุดการแก้ไข] ---
     });
 
-    // --- [แก้ไข] ---
-    // ลบการตรวจสอบ currentSession ที่ซ้ำซ้อนออก
-    // ปล่อยให้ onAuthStateChange (ด้านบน) จัดการการโหลดครั้งแรกเอง
+    // (Logic การตรวจสอบ currentSession ... เหมือนเดิม)
     final currentSession = supabase.auth.currentSession;
     if (currentSession == null) {
       isLoggedIn.value = false; 
       isLoading.value = false; 
+      isLoadingProfile.value = false;
     }
-    // --- [สิ้นสุดการแก้ไข] ---
   }
 
   // ฟังก์ชันสำหรับการ Login
@@ -109,7 +106,16 @@ class LoginController extends GetxController {
         emailController.clear();
         passwordController.clear();
         FocusScope.of(Get.context!).unfocus();
+        
+        // <<<--- [TASK 19 - BUG 2 - แก้ไข] ---
+        // เราต้องตั้ง isLoading = false ที่นี่ด้วย
+        // (แต่เราจะย้ายไปทำใน _loadUserProfile แทน เพื่อให้ปุ่มหมุนจนกว่าจะโหลด Profile เสร็จ)
+        // isLoading.value = false; // (ย้ายไปไว้ใน _loadUserProfile)
+        // <<<--- [สิ้นสุดการแก้ไข] ---
+
       }
+      
+      // (ถ้า res.user เป็น null Supabase จะ throw AuthException เอง)
 
     } on AuthException catch (e) {
       // ( ... Error Handling คงเดิม ... )
@@ -134,6 +140,7 @@ class LoginController extends GetxController {
         colorText: Colors.white,
       );
     }
+    // (หมายเหตุ: isLoading.value = true จะยังคงอยู่หาก Login สำเร็จ จนกว่าจะมีการ Navigate)
   }
 
   // ฟังก์ชันโหลดข้อมูล User Profile
@@ -168,19 +175,20 @@ class LoginController extends GetxController {
        print("User profile loaded: ${userName.value}");
        print("Favorites loaded: ${userFavoriteList.length}");
 
-       isLoading.value = false; // <<<--- หยุด Loading
-
-       Get.closeCurrentSnackbar(); 
-      
-
-       // Navigate ไป Navbar
-       if (Get.currentRoute != AppRoutes.NAVBAR) {
-          Get.offAllNamed(AppRoutes.NAVBAR);
+       // <<<--- [TASK 19 - BUG 1 - แก้ไข] ---
+       // คืนค่า Logic การนำทาง (Navigation)
+       // แต่เราจะสั่ง Navigate *เฉพาะเมื่อ* เรากำลังอยู่ที่หน้า Login เท่านั้น
+       // (ถ้าเราอยู่ที่ Splash, เราจะปล่อยให้ Splash จัดการการ Navigate)
+       if (Get.currentRoute == AppRoutes.LOGIN) {
+          isLoading.value = false; // <<< ปิดการโหลดของปุ่ม Login
+          Get.closeCurrentSnackbar(); 
+          Get.offAllNamed(AppRoutes.NAVBAR); // <<< สั่ง Navigate
        }
+       // <<<--- [สิ้นสุดการแก้ไข] ---
 
     } catch (e) {
       // ( ... Error Handling คงเดิม ... )
-      isLoading.value = false; 
+      isLoading.value = false; // <<< [เพิ่ม] หยุด Loading ถ้า Error
       Get.closeCurrentSnackbar(); 
       Get.snackbar(
         'ข้อผิดพลาด',
@@ -190,6 +198,9 @@ class LoginController extends GetxController {
         colorText: Colors.white,
       );
       await logout(); 
+    } finally {
+      // (แจ้ง SplashController ว่าโหลดเสร็จแล้ว ... เหมือนเดิม)
+      isLoadingProfile.value = false;
     }
   }
   
@@ -225,6 +236,7 @@ class LoginController extends GetxController {
     userlocations.value = '';
     userFavoriteList.clear();
     isLoading.value = false; 
+    isLoadingProfile.value = false;
     print("User data cleared.");
   }
 

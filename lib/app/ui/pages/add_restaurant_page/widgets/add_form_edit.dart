@@ -8,8 +8,8 @@ import 'package:food_near_me_app/app/ui/pages/restaurant_detail_page/widgets/det
 // Import Controller ที่เกี่ยวข้อง
 import '../add_restaurant_controller.dart'; 
 
-// Import BannerType จากแหล่งกำเนิด (Path ต้องถูกต้อง)
-import '../../edit_restaurant_detail_page/edit_restaurant_detail_controller.dart' show BannerType;
+// <<<--- 1. [แก้ไข] Import Helper Class (MenuItemController) ที่เรา *กำลังจะสร้าง* ใน Controller
+import '../../edit_restaurant_detail_page/edit_restaurant_detail_controller.dart' show BannerType, MenuItemController;
 
 
 class AddFormEdit extends StatelessWidget {
@@ -63,14 +63,27 @@ class AddFormEdit extends StatelessWidget {
           controller.locationController,
           maxLines: 3,
         ),
-        _buildImagePicker(
-          label: 'รูปเมนู',
-          imageList: controller.menuImageUrlsOrPaths,
-          onAdd: () => controller.addMenuImages(),
-          onRemove: (index) => controller.removeMenuImage(index),
+
+        // (Menu Editor ... เหมือนเดิม)
+        _buildMenuEditor(
+          label: 'รายการเมนู',
+          controller: controller,
         ),
+
+        // (Gallery ... เหมือนเดิม)
+        const Divider(height: 30, thickness: 1),
+        _buildImagePicker(
+          label: 'รูปแกลเลอรี (แสดงในหน้าร้าน)', // <<< Label ใหม่
+          imageList: controller.galleryImageUrlsOrPaths, // <<< State ใหม่
+          onAdd: () => controller.addGalleryImage(), // <<< Function ใหม่
+          onRemove: (index) =>
+              controller.removeGalleryImage(index), // <<< Function ใหม่
+        ),
+        const Divider(height: 30, thickness: 1),
+        
+        // (Promotion ... เหมือนเดิม)
         Text(
-          'จัดการโปรโมชั่น',
+          'จัดการโปรโมชั่น', // <<< (ลบ / แกลเลอรี ออก)
           style: TextStyle(
             fontSize: 18,
             fontWeight: FontWeight.bold,
@@ -82,7 +95,7 @@ class AddFormEdit extends StatelessWidget {
             children: [
               Expanded(
                 child: RadioListTile<BannerType>(
-                  title: const Text('รูปภาพ'),
+                  title: const Text('รูปภาพ'), // <<< (ชื่อเดิม)
                   value: BannerType.image,
                   groupValue: controller.selectedBannerType.value, 
                   onChanged: (value) =>
@@ -105,19 +118,46 @@ class AddFormEdit extends StatelessWidget {
           if (controller.selectedBannerType.value == 
               BannerType.image) {
             return _buildImagePicker(
-              label: 'รูปโปรโมชั่น',
-              imageList: controller.bannerImageUrlsOrPaths, 
-              onAdd: () => controller.addPromotion(),
+              label: 'รูปโปรโมชั่น', // <<< (Label เดิม)
+              imageList: controller.promotionImageUrlsOrPaths, // <<< State ใหม่
+              onAdd: () => controller.addPromotionImage(), // <<< Function ใหม่
               onRemove: (index) =>
-                  controller.removeBannerImage(index),
+                  controller.removePromotionImage(index), // <<< Function ใหม่
             );
           } else {
             return _buildBannerTextEditor(
-              label: 'ข้อความโปรโมชั่น',
+              label: 'ข้อความโปรโมชั่น', 
               controller: controller, 
             );
           }
         }),
+        
+        const Divider(height: 30, thickness: 1),
+
+        // <<<--- [TASK 16.10 - เริ่มแก้ไข] ---
+        // (เพิ่ม Checkboxes)
+        _buildCheckboxTile(
+          label: 'มีบริการส่งอาหาร (Delivery)',
+          icon: Icons.delivery_dining,
+          iconColor: Colors.green,
+          // <<< เรียก State hasDelivery (ที่เรากำลังจะสร้าง)
+          rxValue: controller.hasDelivery, 
+          onChanged: (newValue) {
+            controller.hasDelivery.value = newValue ?? false;
+          },
+        ),
+        _buildCheckboxTile(
+          label: 'สามารถทานที่ร้านได้ (Dine-in)',
+          icon: Icons.restaurant,
+          iconColor: Colors.blue.shade700,
+          // <<< เรียก State hasDineIn (ที่เรากำลังจะสร้าง)
+          rxValue: controller.hasDineIn, 
+          onChanged: (newValue) {
+            controller.hasDineIn.value = newValue ?? false;
+          },
+        ),
+        // <<<--- [TASK 16.10 - สิ้นสุดการแก้ไข] ---
+
         const Divider(height: 30, thickness: 1),
         _buildTextFieldWithLabel(
           'ประเภทอาหาร (ข้อความเดียว)',
@@ -128,9 +168,153 @@ class AddFormEdit extends StatelessWidget {
   }
 }
 
-// --- (Helper Widgets: _buildCoverImagePicker, _buildTextFieldWithLabel, _buildImagePicker, _buildBannerTextEditor) ---
-// Note: Helper Widgets จะถูกกำหนดให้รับ 'dynamic controller' แทน
-// *เนื่องจากโค้ดเดิมใช้ dynamic controller อยู่แล้ว จึงยังคงใช้ dynamic*
+// <<<--- [TASK 16.10 - เพิ่ม] Helper Widget ใหม่สำหรับ Checkbox ---
+Widget _buildCheckboxTile({
+  required String label,
+  required IconData icon,
+  required Color iconColor,
+  required RxBool rxValue, // รับ RxBool
+  required Function(bool?) onChanged,
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8.0),
+    child: Container(
+      decoration: BoxDecoration(
+        color: Colors.grey[100],
+        borderRadius: BorderRadius.circular(8.0),
+      ),
+      child: Obx( // ใช้ Obx เพื่อให้ Checkbox อัปเดต
+        () => CheckboxListTile(
+          title: Text(
+            label,
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w600,
+              color: Colors.grey[700],
+            ),
+          ),
+          secondary: Icon(icon, color: iconColor),
+          value: rxValue.value, // อ่านค่า .value
+          onChanged: onChanged,
+          activeColor: Colors.pink[400],
+          controlAffinity: ListTileControlAffinity.leading, // Checkbox อยู่ด้านซ้าย
+        ),
+      ),
+    ),
+  );
+}
+// <<<--- [TASK 16.10 - สิ้นสุดการเพิ่ม] ---
+
+// (Helper Widgets: _buildCoverImagePicker, _buildTextFieldWithLabel, _buildImagePicker, _buildBannerTextEditor, _buildMenuEditor)
+// (คัดลอก Helper Widgets 5 ตัวมาไว้ที่นี่)
+
+Widget _buildMenuEditor({
+  required String label,
+  required dynamic controller, // รับ dynamic controller
+}) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 16.0),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[700],
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.add_circle, color: Colors.green),
+              onPressed: () => controller.addMenuItemField(), 
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.all(8.0),
+          decoration: BoxDecoration(
+            color: Colors.grey[100],
+            borderRadius: BorderRadius.circular(8.0),
+          ),
+          child: Obx(() {
+            if (controller.menuControllers.isEmpty) { 
+              return const SizedBox(
+                height: 50,
+                child: Center(
+                  child: Text( 'กด "+" เพื่อเพิ่มรายการเมนู', style: TextStyle(color: Colors.grey) ),
+                ),
+              );
+            }
+            return Column(
+              children: controller.menuControllers.map<Widget>((menuCtrl) { 
+                final index = controller.menuControllers.indexOf( menuCtrl );
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        flex: 3, 
+                        child: TextField(
+                          controller: menuCtrl.nameController,
+                          decoration: InputDecoration(
+                            hintText: 'ชื่อเมนู ${index + 1}',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric( horizontal: 16.0, vertical: 12.0 ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        flex: 2, 
+                        child: TextField(
+                          controller: menuCtrl.priceController,
+                          keyboardType: TextInputType.numberWithOptions(decimal: true),
+                          decoration: InputDecoration(
+                            hintText: 'ราคา',
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8.0),
+                              borderSide: BorderSide.none,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric( horizontal: 16.0, vertical: 12.0 ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        "บาท",
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey[700],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon( Icons.remove_circle, color: Colors.red ),
+                        onPressed: () => controller.removeMenuItemField(index), 
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(), 
+            );
+          }),
+        ),
+      ],
+    ),
+  );
+}
 
 Widget _buildCoverImagePicker({
    required String label,

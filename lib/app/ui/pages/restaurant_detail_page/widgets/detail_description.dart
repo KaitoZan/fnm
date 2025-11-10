@@ -24,6 +24,7 @@ class DetailDescription extends StatelessWidget {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // (Description, OpeningHours, Phone, Location ... เหมือนเดิม)
           Text(
             restaurant.description ?? 'ไม่มีรายละเอียดเพิ่มเติม',
             style: TextStyle(fontSize: 14.0, color: Colors.grey[700]),
@@ -68,15 +69,21 @@ class DetailDescription extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8.0),
+          
+          // <<<--- [TASK 16.5 - เริ่มแก้ไข] ---
           Obx(
             () => StatusTag(
               isOpen: restaurant.isOpen.value,
-              showMotorcycleIcon: restaurant.showMotorcycleIcon,
+              // showMotorcycleIcon: restaurant.showMotorcycleIcon, // <<< [แก้ไข]
+              hasDelivery: restaurant.hasDelivery, // <<< [แก้ไข]
+              hasDineIn: restaurant.hasDineIn, // <<< [เพิ่ม]
               fontSize: 14,
               iconSize: 20,
               showOpenStatus: true,
             ),
           ),
+          // <<<--- [TASK 16.5 - สิ้นสุดการแก้ไข] ---
+          
           const SizedBox(height: 8.0),
           Row(
             children: [

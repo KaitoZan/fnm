@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 import '../../global_widgets/appbarB.dart';
 import 'widgets/bottom_bt.dart';
 import 'widgets/profile_head.dart';
-import 'widgets/profileimshow.dart';
+import 'widgets/profile_image_show.dart';
 import 'widgets/show_profile_detail.dart';
 
 class MyProfilePage extends GetView<MyProfileController> {

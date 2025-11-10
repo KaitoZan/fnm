@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 // ใช้ DetailMenuCtrl เพื่อความสะดวกในการจัดการ Error/Loading
 import 'package:food_near_me_app/app/ui/pages/restaurant_detail_page/widgets/detail_menu_ctrl.dart';
 import 'package:get/get.dart';
+// <<<--- 1. [เพิ่ม] Import (สำหรับ CachedNetworkImage)
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../global_widgets/star_rating.dart';
 import '../../../global_widgets/status_tag.dart';
@@ -15,7 +17,12 @@ class HomeRestaurantCard extends StatelessWidget {
   final double rating;
   // isOpen ตอนนี้มาจาก Model ที่เป็น RxBool
   final RxBool isOpen;
-  final bool showMotorcycleIcon;
+  
+  // <<<--- 2. [แก้ไข]
+  // final bool showMotorcycleIcon;
+  final bool hasDelivery;
+  final bool hasDineIn;
+
   final VoidCallback? onTap;
   final double? distanceInMeters; // <<<--- [เพิ่ม] รับค่าระยะทาง
 
@@ -26,7 +33,9 @@ class HomeRestaurantCard extends StatelessWidget {
     required this.description,
     this.rating = 0.0,
     required this.isOpen, // รับ RxBool
-    this.showMotorcycleIcon = false,
+    // this.showMotorcycleIcon = false, // <<< 3. [แก้ไข]
+    required this.hasDelivery,
+    required this.hasDineIn,
     this.onTap,
     this.distanceInMeters, // <<<--- [เพิ่ม]
   });
@@ -117,11 +126,13 @@ class HomeRestaurantCard extends StatelessWidget {
                                   ),
                                 ),
                               
-                              // --- Widget StatusTag (เหมือนเดิม) ---
+                              // <<<--- 4. [แก้ไข] Widget StatusTag
                               Obx(() => StatusTag(
                                 // อ่านค่า .value จาก RxBool
                                 isOpen: isOpen.value,
-                                showMotorcycleIcon: showMotorcycleIcon,
+                                // showMotorcycleIcon: showMotorcycleIcon, // <<< [แก้ไข]
+                                hasDelivery: hasDelivery,
+                                hasDineIn: hasDineIn, // <<< [เพิ่ม]
                                 fontSize: 12,
                               )),
                             ],
