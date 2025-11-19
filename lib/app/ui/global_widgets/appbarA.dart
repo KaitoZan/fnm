@@ -1,4 +1,4 @@
-// lib/app/ui/global_widgets/appbarA.dart
+// lib.zip/app/ui/global_widgets/appbarA.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -41,28 +41,38 @@ class AppbarA extends StatelessWidget implements PreferredSizeWidget {
             return Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: PopupMenuButton<String>(
-                // --- (onSelected ... เหมือนเดิม) ---
+                // <<<--- [TASK 26 - เริ่มแก้ไข] ---
                 onSelected: (String result) async { 
+                  // เคลียร์ Focus ก่อน Navigate
                   filterController.clearSearchFocus(tag);
                   FocusScope.of(context).unfocus();
-                  await Future.delayed(const Duration(milliseconds: 100)); 
+                  await Future.delayed(const Duration(milliseconds: 100)); // รอเล็กน้อย
 
+                  // Navigate ตามค่าที่เลือก
                   if (result == 'profile') {
                     Get.toNamed(AppRoutes.MYPROFILE);
                   } else if (result == 'setting') {
                     Get.toNamed(AppRoutes.SETTING);
                   } else if (result == 'logout') {
+                    
+                    // เพิ่ม Delay เล็กน้อยเพื่อให้ PopupMenu ปิดตัวก่อน
                     await Future.delayed(const Duration(milliseconds: 50)); 
+                    
+                    // 1. await การ logout (ซึ่งจะไปเรียก _clearUserData)
                     await loginController.logout(); 
-                    Get.offAllNamed(AppRoutes.LOGIN);
+                    
+                    // 2. [ลบ] สั่ง Navigation จาก UI เอง (ย้ายไปไว้ใน _clearUserData)
+                    // Get.offAllNamed(AppRoutes.LOGIN);
                   }
                 },
-                // --- (itemBuilder ... เหมือนเดิม) ---
-                color: Colors.pink[50], 
+                // <<<--- [TASK 26 - สิ้นสุดการแก้ไข] ---
+                
+                color: Colors.pink[50], // สีพื้นหลัง Popup
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(15.0),
                 ),
-                offset: const Offset(0, 50), 
+                offset: const Offset(0, 50), // ตำแหน่ง Popup
+                // --- itemBuilder สร้างเมนู ---
                 itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
                   const PopupMenuItem<String>(value: 'profile', child: Text('ดูหน้าโปรไฟล์')),
                   const PopupMenuItem<String>(value: 'setting', child: Text('การตั้งค่า')),
@@ -80,15 +90,6 @@ class AppbarA extends StatelessWidget implements PreferredSizeWidget {
                       final imageUrl = loginController.userProfileImageUrl.value;
                       // ตรวจสอบว่าเป็น URL หรือ Asset หรือ ค่าว่าง
                       if (imageUrl.startsWith('http')) {
-                          // <<<--- [TASK 12.3 - เริ่มแก้ไข] ---
-                          // (ลบ Image.network)
-                          // return ClipOval(
-                          //     child: Image.network(
-                          //         imageUrl,
-                          //         ...
-                          //     )
-                          // );
-                          
                           // (ใช้ CachedNetworkImage แทน)
                           return ClipOval(
                             child: CachedNetworkImage(
@@ -100,7 +101,6 @@ class AppbarA extends StatelessWidget implements PreferredSizeWidget {
                               errorWidget: (context, url, error) => const Icon(Icons.person, color: Colors.white),
                             ),
                           );
-                          // <<<--- [TASK 12.3 - สิ้นสุดการแก้ไข] ---
                           
                       } else if (imageUrl.startsWith('assets/')) {
                           // ถ้าเป็น Asset ใช้ Image.asset (เหมือนเดิม)

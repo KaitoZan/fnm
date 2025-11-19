@@ -1,13 +1,15 @@
-// lib/app/ui/pages/restaurant_detail_page/widgets/review.dart
+// lib.zip/app/ui/pages/restaurant_detail_page/widgets/review.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:food_near_me_app/app/ui/pages/restaurant_detail_page/widgets/detail_menu_ctrl.dart'; // ใช้ DetailMenuCtrl
+// import 'package:food_near_me_app/app/ui/pages/restaurant_detail_page/widgets/detail_menu_ctrl.dart'; // (ไม่จำเป็นต้องใช้ใน Widget นี้แล้ว)
+// <<<--- [TASK 21 - 1. เพิ่ม] Import CachedNetworkImage
+import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../global_widgets/dotline.dart';
 import '../../../global_widgets/star_rating.dart';
-import '../../login_page/login_controller.dart'; // <<<--- [เพิ่ม] Import LoginController
-import '../restaurant_detail_controller.dart'; // Import Controller และ Model
+import '../../login_page/login_controller.dart'; 
+import '../restaurant_detail_controller.dart'; 
 
 class Review extends StatelessWidget {
   final String restaurantId;
@@ -17,7 +19,7 @@ class Review extends StatelessWidget {
   Widget build(BuildContext context) {
     final RestaurantDetailController controller =
         Get.find<RestaurantDetailController>(tag: restaurantId);
-    final LoginController loginController = Get.find<LoginController>(); // <<<--- [เพิ่ม] Find LoginController
+    final LoginController loginController = Get.find<LoginController>(); 
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -39,7 +41,6 @@ class Review extends StatelessWidget {
               fontWeight: FontWeight.bold,
               color: Colors.pink[700],
             ),
-            // textAlign: TextAlign.center, // อาจจะไม่ต้อง Center ก็ได้
           ),
         ),
         Dotline(
@@ -53,15 +54,14 @@ class Review extends StatelessWidget {
 
         // --- ส่วนแสดงผล List รีวิว ---
         Container(
-          // จำกัดความสูงสูงสุด แต่ให้ปรับตามเนื้อหาได้
           constraints: const BoxConstraints(maxHeight: 400),
           width: double.infinity,
           padding: const EdgeInsets.all(8.0),
           decoration: BoxDecoration(
-            color: Colors.pink.shade50, // สีพื้นหลังอ่อนๆ
+            color: Colors.pink.shade50, 
             borderRadius: BorderRadius.circular(8.0),
           ),
-          child: Obx(() { // ใช้ Obx เพื่อติดตาม State reviews และ isLoadingReviews
+          child: Obx(() { 
             // --- แสดง Loading Indicator ---
             if (controller.isLoadingReviews.value) {
               return const Center(child: CircularProgressIndicator());
@@ -81,38 +81,51 @@ class Review extends StatelessWidget {
             // --- แสดง ListView ของรีวิว ---
             else {
               return ListView.builder(
-                shrinkWrap: true, // ทำให้ ListView สูงตามเนื้อหา
-                physics: const AlwaysScrollableScrollPhysics(), // ทำให้เลื่อนได้เสมอ
-                itemCount: controller.reviews.length, // จำนวนรีวิว
+                shrinkWrap: true, 
+                physics: const AlwaysScrollableScrollPhysics(), 
+                itemCount: controller.reviews.length, 
                 itemBuilder: (context, index) {
-                  // ดึงข้อมูลรีวิว (CommentModel) จาก List
                   final review = controller.reviews[index];
-                  
-                  // --- [เพิ่ม] ตรวจสอบว่าเป็นเจ้าของคอมเมนต์หรือไม่ ---
                   final bool isOwner = loginController.isLoggedIn.value &&
                                       loginController.userId.value == review.userId;
 
-                  return Card( // ใช้ Card เพื่อให้แต่ละรีวิวดูแยกกัน
+                  return Card( 
                     margin: const EdgeInsets.only(bottom: 15.0),
-                    elevation: 2, // เงาเล็กน้อย
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), // ขอบมน
+                    elevation: 2, 
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), 
                     child: Padding(
                       padding: const EdgeInsets.all(12.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row( // แถวสำหรับ Avatar, Username, ปุ่ม Report, Rating
-                            crossAxisAlignment: CrossAxisAlignment.center, // จัดให้อยู่กลางแนวตั้ง
+                          Row( 
+                            crossAxisAlignment: CrossAxisAlignment.center, 
                             children: [
+                              
+                              // <<<--- [TASK 21 - 2. เริ่มแก้ไข] ---
                               // แสดง Avatar
                               CircleAvatar(
                                 radius: 18,
                                 backgroundColor: Colors.grey.shade300,
-                                // ใช้ DetailMenuCtrl แสดง Avatar URL (ถ้ามี)
-                                child: review.userAvatarUrl != null && review.userAvatarUrl!.isNotEmpty
-                                      ? ClipOval(child: DetailMenuCtrl(imageUrl: review.userAvatarUrl!, fit: BoxFit.cover))
-                                      : const Icon(Icons.person, color: Colors.white, size: 24), // ไอคอน Default
+                                
+                                // (ลบ child: ... ClipOval(child: DetailMenuCtrl(...)) ... )
+                                // child: review.userAvatarUrl != null && review.userAvatarUrl!.isNotEmpty
+                                //       ? ClipOval(child: DetailMenuCtrl(imageUrl: review.userAvatarUrl!, fit: BoxFit.cover))
+                                //       : const Icon(Icons.person, color: Colors.white, size: 24),
+
+                                // (เพิ่ม backgroundImage แทน)
+                                backgroundImage: (review.userAvatarUrl != null && review.userAvatarUrl!.isNotEmpty)
+                                    // (ใช้ CachedNetworkImageProvider)
+                                    ? CachedNetworkImageProvider(review.userAvatarUrl!) 
+                                    : null, // (ถ้าเป็น null, backgroundColor จะทำงาน)
+                                
+                                // (เพิ่ม child: (สำหรับกรณีที่ไม่มีรูป)
+                                child: (review.userAvatarUrl == null || review.userAvatarUrl!.isEmpty)
+                                    ? const Icon(Icons.person, color: Colors.white, size: 24) // ไอคอน Default
+                                    : null, // (ถ้ามีรูป, backgroundImage จะแสดง)
                               ),
+                              // <<<--- [TASK 21 - 2. สิ้นสุดการแก้ไข] ---
+                              
                               const SizedBox(width: 10),
                               // แสดงชื่อผู้ใช้ (ขยายเต็มพื้นที่ที่เหลือ)
                               Expanded(
@@ -122,26 +135,25 @@ class Review extends StatelessWidget {
                                     fontWeight: FontWeight.bold,
                                     fontSize: 15.0,
                                   ),
-                                  overflow: TextOverflow.ellipsis, // ตัดข้อความถ้าชื่อยาว
+                                  overflow: TextOverflow.ellipsis, 
                                   maxLines: 1,
                                 ),
                               ),
-                              const SizedBox(width: 8), // ระยะห่างก่อนปุ่ม Report
+                              const SizedBox(width: 8), 
                               
-                              // --- [แก้ไข] ปุ่ม Report (แสดงเมื่อ *ไม่ใช่* เจ้าของ) ---
+                              // (ปุ่ม Report - เหมือนเดิม)
                               if (!isOwner)
                                 IconButton(
                                   icon: Icon(Icons.flag_outlined, color: Colors.grey.shade600, size: 20),
-                                  padding: EdgeInsets.zero, // ไม่มี Padding เพิ่ม
-                                  constraints: const BoxConstraints(), // ให้ปุ่มมีขนาดเล็กสุด
-                                  tooltip: 'แจ้งปัญหาคอมเมนต์นี้', // ข้อความเมื่อกดค้าง
+                                  padding: EdgeInsets.zero, 
+                                  constraints: const BoxConstraints(), 
+                                  tooltip: 'แจ้งปัญหาคอมเมนต์นี้', 
                                   onPressed: () {
-                                     // เรียก showReportDialog จาก Controller พร้อมส่ง comment ID
                                      controller.showReportDialog(review.id);
                                   },
                                 ),
                               
-                              // --- [เพิ่ม] ปุ่ม Delete (แสดงเมื่อ *เป็น* เจ้าของ) ---
+                              // (ปุ่ม Delete - เหมือนเดิม)
                               if (isOwner)
                                 IconButton(
                                   icon: Icon(Icons.delete_outline, color: Colors.red.shade600, size: 20),
@@ -149,33 +161,30 @@ class Review extends StatelessWidget {
                                   constraints: const BoxConstraints(),
                                   tooltip: 'ลบคอมเมนต์นี้',
                                   onPressed: () {
-                                     // เรียก deleteComment จาก Controller
                                      controller.deleteComment(review.id);
                                   },
                                 ),
 
-                              const SizedBox(width: 8), // ระยะห่างระหว่างปุ่มกับดาว
-                              // แสดง Rating (ดาว)
+                              const SizedBox(width: 8), 
+                              // (Rating (ดาว) - เหมือนเดิม)
                               StarRating(
-                                  rating: review.ratingScore.toDouble(), // ใช้ ratingScore จาก Model
-                                  size: 16 // ขนาดดาว
+                                  rating: review.ratingScore.toDouble(), 
+                                  size: 16 
                               ),
                             ],
                           ),
-                          const SizedBox(height: 10.0), // เพิ่มระยะห่าง
-                          // แสดงเนื้อหาคอมเมนต์
+                          const SizedBox(height: 10.0), 
+                          // (เนื้อหาคอมเมนต์ - เหมือนเดิม)
                           Text(
-                            review.content, // ใช้ content จาก Model
+                            review.content, 
                             style: const TextStyle(fontSize: 14.0, color: Colors.black87),
                           ),
                           const SizedBox(height: 8.0),
-                           // แสดงวันที่ (จัดชิดขวา)
+                           // (วันที่ - เหมือนเดิม)
                            Align(
                              alignment: Alignment.centerRight,
                              child: Text(
-                                // Format วันที่ให้อ่านง่ายขึ้น (อาจจะต้อง import 'package:intl/intl.dart';)
-                                // หรือแสดงแบบง่ายๆ ไปก่อน
-                                review.createdAt.toLocal().toString().substring(0, 16), // เช่น 2023-10-27 10:30
+                                review.createdAt.toLocal().toString().substring(0, 16), 
                                 style: const TextStyle(fontSize: 10.0, color: Colors.grey),
                              ),
                            ),
@@ -200,50 +209,50 @@ class Review extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 15.0),
-        // แถวสำหรับให้คะแนน (ดาว)
+        // (StarRating - เหมือนเดิม)
         Align(
           alignment: Alignment.centerLeft,
           child: Row(
             children: [
               const Text("ให้คะแนน: ", style: TextStyle(fontSize: 16.0)),
-              Obx( // ใช้ Obx เพื่อให้ดาวอัปเดตเมื่อ userRating เปลี่ยน
+              Obx( 
                 () => StarRating(
-                  rating: controller.userRating.value, // ค่าคะแนนปัจจุบัน
-                  size: 24, // ขนาดดาวใหญ่ขึ้น
-                  onRatingChanged: controller.onRatingChanged, // Callback เมื่อกดดาว
+                  rating: controller.userRating.value, 
+                  size: 24, 
+                  onRatingChanged: controller.onRatingChanged, 
                 ),
               ),
             ],
           ),
         ),
         const SizedBox(height: 15.0),
-        // ช่องกรอกคอมเมนต์
+        // (TextField - เหมือนเดิม)
         TextField(
-          controller: controller.commentController, // Controller จาก RestaurantDetailController
-          maxLines: 4, // หลายบรรทัด
+          controller: controller.commentController, 
+          maxLines: 4, 
           decoration: InputDecoration(
             hintText: "เขียนความคิดเห็นของคุณที่นี่...",
-            border: OutlineInputBorder( // กรอบสี่เหลี่ยม
+            border: OutlineInputBorder( 
               borderRadius: BorderRadius.circular(10.0),
               borderSide: BorderSide(color: Colors.grey.shade400),
             ),
-            focusedBorder: OutlineInputBorder( // กรอบตอน Focus
+            focusedBorder: OutlineInputBorder( 
               borderRadius: BorderRadius.circular(10.0),
               borderSide: BorderSide(color: Colors.pink.shade400, width: 2.0),
             ),
-            contentPadding: const EdgeInsets.all(15.0), // ระยะห่างข้างใน
+            contentPadding: const EdgeInsets.all(15.0), 
           ),
         ),
         const SizedBox(height: 20.0),
-        // ปุ่มส่งรีวิว
+        // (ปุ่มส่งรีวิว - เหมือนเดิม)
         Center(
           child: ElevatedButton(
-            onPressed: controller.submitReview, // เรียกฟังก์ชัน submitReview ใน Controller
+            onPressed: controller.submitReview, 
             style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.pink[400], // สีปุ่ม
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15), // ขนาดปุ่ม
+              backgroundColor: Colors.pink[400], 
+              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15), 
               shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30.0), // ปุ่มขอบมน
+                borderRadius: BorderRadius.circular(30.0), 
               ),
             ),
             child: Text(
@@ -251,7 +260,7 @@ class Review extends StatelessWidget {
               style: GoogleFonts.poppins(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: Colors.white, // สีตัวอักษร
+                color: Colors.white, 
               ),
             ),
           ),

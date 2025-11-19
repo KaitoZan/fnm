@@ -61,6 +61,7 @@ class ShowFavouriteCard extends StatelessWidget {
                 imageUrl: restaurant.imageUrl,
                 restaurantName: restaurant.restaurantName,
                 description: restaurant.description,
+                detail: restaurant.detail,
                 rating: restaurant.rating,
                 isOpen: restaurant.isOpen, 
                 

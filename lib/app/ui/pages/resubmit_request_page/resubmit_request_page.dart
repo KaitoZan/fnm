@@ -1,4 +1,4 @@
-// lib/app/ui/pages/my_shop_page/widgets/resubmit_request_page.dart
+// lib.zip/app/ui/pages/my_shop_page/widgets/resubmit_request_page.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -9,9 +9,14 @@ import '../../global_widgets/back3_bt.dart';
 import '../../global_widgets/bt_scrolltop.dart';
 
 import '../edit_restaurant_detail_page/widgets/eddt_form_edit.dart';
-import '../edit_restaurant_detail_page/widgets/eddt_head_text.dart';
+// (ลบ EdDtHeadText เดิมออก เพราะเราจะใช้ Logic)
+// import '../edit_restaurant_detail_page/widgets/eddt_head_text.dart';
 import '../restaurant_detail_page/widgets/scrollctrl.dart';
 import 'resubmit_request_controller.dart';
+
+// <<<--- [TASK 24.4 - เพิ่ม] Import
+import '../edit_restaurant_detail_page/widgets/eddt_head_text.dart'; 
+// <<<--- [สิ้นสุดการเพิ่ม]
 
 class ResubmitRequestPage extends GetView<ResubmitRequestController> {
   final String requestEditId;
@@ -31,19 +36,8 @@ class ResubmitRequestPage extends GetView<ResubmitRequestController> {
       onTap: () => FocusScope.of(context).unfocus(),
       child: Scaffold(
         appBar: AppBar(
-          title: Obx(() {
-            String titleText = 'รายละเอียดคำร้อง';
-            if (controller.isPageLoading.value) {
-               titleText = 'กำลังโหลด...';
-            } else if (controller.originalStatus.value == RequestStatus.rejected) {
-              titleText = 'แก้ไขคำร้องที่ถูกปฏิเสธ';
-            } else if (controller.originalStatus.value == RequestStatus.pending) {
-              titleText = 'รายละเอียดคำร้อง (รอตรวจสอบ)';
-            } else {
-               titleText = 'รายละเอียดคำร้อง (อนุมัติแล้ว)';
-            }
-            return Text(titleText);
-          }),
+          // (Title ถูกลบไปแล้ว ดีแล้ว)
+          
           backgroundColor: Colors.pink[200],
           leading: const Back3Bt(),
           toolbarHeight: kToolbarHeight + 16,
@@ -72,7 +66,8 @@ class ResubmitRequestPage extends GetView<ResubmitRequestController> {
               ),
               child: Column(
                 children: [
-                  Container( height: 50 ),
+                  // (Container(height: 50) ถูกลบไปแล้ว)
+
                   Expanded(
                     child: Container(
                       width: double.infinity,
@@ -97,7 +92,27 @@ class ResubmitRequestPage extends GetView<ResubmitRequestController> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 const SizedBox(height: 20),
-                                const EdDtHeadText(), 
+                                
+                                // <<<--- [TASK 25 - เริ่มแก้ไข] ---
+                                // (ย้าย Logic การแสดง Title มาไว้ที่นี่)
+                                Obx(() {
+                                    String titleText = 'รายละเอียดคำร้อง';
+                                    if (controller.isPageLoading.value) {
+                                      titleText = 'กำลังโหลด...';
+                                    } else if (controller.originalStatus.value == RequestStatus.rejected) {
+                                      // (แก้หน้านี้ด้วย)
+                                      titleText = 'แก้ไขคำร้อง\n(ที่ถูกปฏิเสธ)';
+                                    } else if (controller.originalStatus.value == RequestStatus.pending) {
+                                      // (แก้หน้านี้)
+                                      titleText = 'รายละเอียดคำร้อง\n(รอตรวจสอบ)';
+                                    } else {
+                                      // (แก้หน้านี้ด้วย)
+                                      titleText = 'รายละเอียดคำร้อง\n(อนุมัติแล้ว)';
+                                    }
+                                    return EdDtHeadText(title: titleText);
+                                }),
+                                // <<<--- [TASK 25 - สิ้นสุดการแก้ไข] ---
+                                
                                 const SizedBox(height: 20),
                                 
                                 // (Obx rejectionReason ... เหมือนเดิม)
@@ -135,13 +150,11 @@ class ResubmitRequestPage extends GetView<ResubmitRequestController> {
                                   return const SizedBox.shrink();
                                 }),
                                 
-                                // --- [แก้ไข] (แก้บั๊ก Get.find [image_148c23.png]) ---
-                                // ส่ง 'controller' (ที่ได้จาก GetView) เข้าไป
+                                // (Form)
                                 EddtFormEdit(
                                   restaurantId: requestEditId,
-                                  controller: controller, // <<<--- ส่ง Controller
+                                  controller: controller, 
                                 ), 
-                                // --- [สิ้นสุดการแก้ไข] ---
                                 const SizedBox(height: 30),
                               ],
                             ),

@@ -14,6 +14,7 @@ class HomeRestaurantCard extends StatelessWidget {
   final String? imageUrl;
   final String restaurantName;
   final String description;
+  final String detail;
   final double rating;
   // isOpen ตอนนี้มาจาก Model ที่เป็น RxBool
   final RxBool isOpen;
@@ -31,6 +32,7 @@ class HomeRestaurantCard extends StatelessWidget {
     required this.imageUrl, // อาจจะเป็น null ได้
     required this.restaurantName,
     required this.description,
+    required this.detail,
     this.rating = 0.0,
     required this.isOpen, // รับ RxBool
     // this.showMotorcycleIcon = false, // <<< 3. [แก้ไข]

@@ -42,19 +42,7 @@ class LoginWithBt extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            IconButton(
-              icon: const Icon(Icons.facebook, color: Colors.blue),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.grey.shade300,
-                minimumSize: const Size(80, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-              onPressed: () {
-                debugPrint('=====> Facebook login tapped');
-              },
-            ),
+            
             const SizedBox(width: 8),
             IconButton(
               icon: const Icon(Icons.g_mobiledata, color: Colors.red),
@@ -66,23 +54,11 @@ class LoginWithBt extends StatelessWidget {
                 ),
               ),
               onPressed: () {
-                debugPrint('=====> Google login tapped');
+                // เรียกใช้ฟังก์ชัน
+                loginController.loginWithGoogle();
               },
             ),
-            const SizedBox(width: 8),
-            IconButton(
-              icon: const Icon(Icons.apple, color: Colors.black),
-              style: IconButton.styleFrom(
-                backgroundColor: Colors.grey.shade300,
-                minimumSize: const Size(80, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8.0),
-                ),
-              ),
-              onPressed: () {
-                debugPrint('=====> Apple login tapped');
-              },
-            ),
+           
           ],
         ),
         const SizedBox(height: 20),

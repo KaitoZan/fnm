@@ -137,7 +137,7 @@ class AddFormEdit extends StatelessWidget {
         // <<<--- [TASK 16.10 - เริ่มแก้ไข] ---
         // (เพิ่ม Checkboxes)
         _buildCheckboxTile(
-          label: 'มีบริการส่งอาหาร (Delivery)',
+          label: 'มีบริการส่งอาหาร',
           icon: Icons.delivery_dining,
           iconColor: Colors.green,
           // <<< เรียก State hasDelivery (ที่เรากำลังจะสร้าง)
@@ -147,7 +147,7 @@ class AddFormEdit extends StatelessWidget {
           },
         ),
         _buildCheckboxTile(
-          label: 'สามารถทานที่ร้านได้ (Dine-in)',
+          label: 'สามารถทานที่ร้านได้',
           icon: Icons.restaurant,
           iconColor: Colors.blue.shade700,
           // <<< เรียก State hasDineIn (ที่เรากำลังจะสร้าง)

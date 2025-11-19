@@ -46,10 +46,8 @@ class FilterController extends GetxController {
     _loginController = Get.find<LoginController>();
     locationService = Get.find<LocationService>(); // <<<--- FIX: Find locationService
 
-    // <<<--- [TASK 12.2 - เริ่มแก้ไข] ---
     // ปิดการโหลดอัตโนมัติใน onInit (เราจะย้ายไปสั่งโหลดใน SplashController)
     // initializeAllRestaurants(); 
-    // <<<--- [TASK 12.2 - สิ้นสุดการแก้ไข] ---
 
 
     // Listeners Search
@@ -79,29 +77,27 @@ class FilterController extends GetxController {
   RxBool get isLoadingLocation => locationService.isLoadingLocation; // <<<--- ใช้ locationService
   String get currentAddress => locationService.currentAddress.value; // <<<--- ใช้ locationService
 
-  // ... (ส่วนที่เหลือของ FilterController เหมือนเดิม)
-  // ...
-  
   // โหลดร้านอาหารเริ่มต้น
   Future<void> initializeAllRestaurants() async {
     try {
-      // --- 1. [TASK 16.8 - แก้ไข] Select (เพิ่ม has_dine_in) ---
+      // <<< 1. [แก้ไข] ลบ .eq('status', 'approved') ออก
+      // ต้องดึงร้านค้าทุกสถานะมาทั้งหมด
       final List<Map<String, dynamic>> data = await supabase
           .from('restaurants')
           .select(
-            '*, gallery_imgs_urls, has_dine_in, menus(id, res_id, name, price)', // <<< [แก้ไข]
+            '*, gallery_imgs_urls, has_dine_in, menus(id, res_id, name, price)',
           ) 
-          .eq('status', 'approved');
+          // .eq('status', 'approved') // <<< ลบเงื่อนไขนี้ออก
+          .order('id'); 
 
       final List<Restaurant> tempRestaurants = data.map((map) {
-        // --- 2. เช็ค Favorite (ใช้ ID String) ---
         final bool isCurrentlyFavorite =
             _loginController.isLoggedIn.value &&
             _loginController.userFavoriteList.contains(
               map['id'] as String? ?? '',
-            ); // <<<--- ID (String)
+            );
 
-        // --- 3. สร้าง Object (ใช้ Model ที่แก้แล้ว) ---
+        // --- 2. สร้าง Object (Restaurant Model ที่แก้ไขแล้วจะรับ status) ---
         return Restaurant.fromSupabaseMap(map, isCurrentlyFavorite);
       }).toList();
 
@@ -223,7 +219,7 @@ class FilterController extends GetxController {
     );
     final Position? userPosition = locationService.currentLocation.value;
 
-    // --- [แก้ไข] STEP 1: คำนวณระยะทาง (ถ้ามีตำแหน่ง) หรือรีเซ็ต (ถ้าไม่มี) ---
+    // --- [STEP 1: Calculate Distance] ---
     if (userPosition != null) {
       for (var restaurant in tempFilteredRestaurants) {
         if (restaurant.latitude != null && restaurant.longitude != null) {
@@ -244,10 +240,13 @@ class FilterController extends GetxController {
         restaurant.distanceInMeters = double.maxFinite;
       }
     }
-    // --- [สิ้นสุด STEP 1] ---
 
+    // --- [STEP 2: กรอง (Filter) ข้อมูล] ---
 
-    // --- [แก้ไข] STEP 2: กรอง (Filter) ข้อมูลทั้งหมดก่อน ---
+    // 1. [CRITICAL FIX] กรองเฉพาะร้านที่ 'approved' เท่านั้น (สำหรับผู้ใช้ทั่วไป)
+    tempFilteredRestaurants = tempFilteredRestaurants
+        .where((r) => r.status == 'approved') // <<< [เพิ่ม] กรองสถานะที่แสดงในแอป
+        .toList();
 
     // กรองตาม Search (Home)
     if (homeSearchQuery.value.isNotEmpty) {
@@ -296,7 +295,7 @@ class FilterController extends GetxController {
           .toList();
     }
 
-    // --- [เพิ่ม] กรองระยะทาง 15กม. (ถ้าใช้ตำแหน่ง) ---
+    // กรองระยะทาง 15กม. (ถ้าใช้ตำแหน่ง)
     if (userPosition != null) {
       tempFilteredRestaurants = tempFilteredRestaurants
           .where((r) => r.distanceInMeters <= 10000) // 10,000 เมตร
@@ -305,7 +304,7 @@ class FilterController extends GetxController {
     // --- [สิ้นสุด STEP 2] ---
 
 
-    // --- [แก้ไข] STEP 3: เรียงลำดับ (Sort) เป็นขั้นตอนสุดท้าย ---
+    // --- [STEP 3: เรียงลำดับ (Sort) เป็นขั้นตอนสุดท้าย] ---
     if (userPosition != null) {
       // ถ้ามีตำแหน่ง: เรียงตามระยะทาง
       tempFilteredRestaurants.sort(
@@ -325,7 +324,7 @@ class FilterController extends GetxController {
 
     // --- กรองสำหรับหน้า Favorite ---
     List<Restaurant> tempFilteredFavorites = allRestaurantsObservable
-        .where((restaurant) => restaurant.isFavorite.value)
+        .where((restaurant) => restaurant.isFavorite.value && restaurant.status == 'approved') // <<< [เพิ่ม] กรองสถานะที่นี่ด้วย
         .toList();
 
     // กรองตาม Search (Favorite)

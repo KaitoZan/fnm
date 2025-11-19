@@ -1,9 +1,9 @@
-// lib/app/ui/pages/login_page/login_controller.dart
+// lib.zip/app/ui/pages/login_page/login_controller.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:flutter/foundation.dart';
 import '../../../routes/app_routes.dart';
 
 class LoginController extends GetxController {
@@ -60,6 +60,21 @@ class LoginController extends GetxController {
       isLoadingProfile.value = false;
     }
   }
+  Future<void> loginWithGoogle() async {
+    try {
+      // ใช้ Scheme ที่เราตั้งไว้
+      const String myRedirectUrl = 'io.supabase.foodnearme://login-callback';
+
+      // สั่ง Login
+      await supabase.auth.signInWithOAuth(
+        OAuthProvider.google,
+        redirectTo: kIsWeb ? null : myRedirectUrl,
+      );
+      // หมายเหตุ: หลัง Login สำเร็จ Auth Listener ใน onInit จะพาไปหน้า Home เอง
+    } catch (e) {
+      Get.snackbar('Error', 'Login failed: ${e.toString()}');
+    }
+  }
 
   // ฟังก์ชันสำหรับการ Login
   void fetchLogin() async {
@@ -107,15 +122,8 @@ class LoginController extends GetxController {
         passwordController.clear();
         FocusScope.of(Get.context!).unfocus();
         
-        // <<<--- [TASK 19 - BUG 2 - แก้ไข] ---
-        // เราต้องตั้ง isLoading = false ที่นี่ด้วย
-        // (แต่เราจะย้ายไปทำใน _loadUserProfile แทน เพื่อให้ปุ่มหมุนจนกว่าจะโหลด Profile เสร็จ)
-        // isLoading.value = false; // (ย้ายไปไว้ใน _loadUserProfile)
-        // <<<--- [สิ้นสุดการแก้ไข] ---
-
+        // (isLoading จะถูกตั้งเป็น false ใน _loadUserProfile)
       }
-      
-      // (ถ้า res.user เป็น null Supabase จะ throw AuthException เอง)
 
     } on AuthException catch (e) {
       // ( ... Error Handling คงเดิม ... )
@@ -140,7 +148,6 @@ class LoginController extends GetxController {
         colorText: Colors.white,
       );
     }
-    // (หมายเหตุ: isLoading.value = true จะยังคงอยู่หาก Login สำเร็จ จนกว่าจะมีการ Navigate)
   }
 
   // ฟังก์ชันโหลดข้อมูล User Profile
@@ -175,20 +182,15 @@ class LoginController extends GetxController {
        print("User profile loaded: ${userName.value}");
        print("Favorites loaded: ${userFavoriteList.length}");
 
-       // <<<--- [TASK 19 - BUG 1 - แก้ไข] ---
-       // คืนค่า Logic การนำทาง (Navigation)
-       // แต่เราจะสั่ง Navigate *เฉพาะเมื่อ* เรากำลังอยู่ที่หน้า Login เท่านั้น
-       // (ถ้าเราอยู่ที่ Splash, เราจะปล่อยให้ Splash จัดการการ Navigate)
+       // (Logic การนำทาง ... เหมือนเดิมจาก Task 19)
        if (Get.currentRoute == AppRoutes.LOGIN) {
-          isLoading.value = false; // <<< ปิดการโหลดของปุ่ม Login
+          isLoading.value = false; 
           Get.closeCurrentSnackbar(); 
-          Get.offAllNamed(AppRoutes.NAVBAR); // <<< สั่ง Navigate
+          Get.offAllNamed(AppRoutes.NAVBAR); 
        }
-       // <<<--- [สิ้นสุดการแก้ไข] ---
 
     } catch (e) {
-      // ( ... Error Handling คงเดิม ... )
-      isLoading.value = false; // <<< [เพิ่ม] หยุด Loading ถ้า Error
+      isLoading.value = false; 
       Get.closeCurrentSnackbar(); 
       Get.snackbar(
         'ข้อผิดพลาด',
@@ -199,7 +201,6 @@ class LoginController extends GetxController {
       );
       await logout(); 
     } finally {
-      // (แจ้ง SplashController ว่าโหลดเสร็จแล้ว ... เหมือนเดิม)
       isLoadingProfile.value = false;
     }
   }
@@ -238,6 +239,14 @@ class LoginController extends GetxController {
     isLoading.value = false; 
     isLoadingProfile.value = false;
     print("User data cleared.");
+
+    // <<<--- [TASK 26 - เริ่มแก้ไข] ---
+    // เพิ่มการนำทาง (Navigation) ที่นี่
+    // ตรวจสอบก่อนว่าเราไม่ได้อยู่ที่หน้า Login อยู่แล้ว (ป้องกัน Loop)
+    if (Get.currentRoute != AppRoutes.LOGIN) {
+        Get.offAllNamed(AppRoutes.LOGIN);
+    }
+    // <<<--- [TASK 26 - สิ้นสุดการแก้ไข] ---
   }
 
   // ฟังก์ชันสลับ visibility ของ password icon

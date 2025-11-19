@@ -26,7 +26,7 @@ class DetailDescription extends StatelessWidget {
         children: [
           // (Description, OpeningHours, Phone, Location ... เหมือนเดิม)
           Text(
-            restaurant.description ?? 'ไม่มีรายละเอียดเพิ่มเติม',
+            restaurant.detail ?? 'ไม่มีรายละเอียดเพิ่มเติม',
             style: TextStyle(fontSize: 14.0, color: Colors.grey[700]),
           ),
           const SizedBox(height: 10.0),

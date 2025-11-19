@@ -206,13 +206,13 @@ class RegisterController extends GetxController {
         isLoading.value = false; // หยุด Loading
 
         Get.closeCurrentSnackbar(); // <<<--- FIX: ปิด Snackbar เก่า
-        Get.snackbar(
-          'System',
-          'ลงทะเบียนสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยัน (ถ้ามี)',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.green.withOpacity(0.8), // สีเขียวแจ้งสำเร็จ
-          colorText: Colors.white,
-        );
+        // Get.snackbar(
+        //   'System',
+        //   'ลงทะเบียนสำเร็จ! กรุณาตรวจสอบอีเมลเพื่อยืนยัน (ถ้ามี)',
+        //   snackPosition: SnackPosition.TOP,
+        //   backgroundColor: Colors.green.withOpacity(0.8), // สีเขียวแจ้งสำเร็จ
+        //   colorText: Colors.white,
+        // );
         Get.offAllNamed(AppRoutes.LOGIN); // กลับไปหน้า Login
       }
       // กรณี Email ซ้ำ Supabase จะ throw AuthException

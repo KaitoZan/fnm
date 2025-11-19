@@ -1,4 +1,4 @@
-// lib/app/ui/pages/my_shop_page/my_shop_page.dart
+// lib.zip/app/ui/pages/my_shop_page/my_shop_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:food_near_me_app/app/ui/pages/my_shop_page/my_shop_controller.dart';
@@ -9,11 +9,10 @@ import '../../global_widgets/bt_scrolltop.dart';
 import '../../../routes/app_routes.dart'; 
 import '../restaurant_detail_page/widgets/scrollctrl.dart';
 
-// <<< 1. Import Widgets ใหม่ ---
 import 'widgets/my_shop_show_card.dart';
 import 'widgets/my_shop_toggle_bar.dart';
 import 'widgets/my_shop_request_list.dart';
-// <<< สิ้นสุดการ Import ---
+import 'widgets/notification_bell_popup.dart'; // <<< Import
 
 class MyShopPage extends GetView<MyShopController> {
   MyShopPage({super.key});
@@ -54,25 +53,42 @@ class MyShopPage extends GetView<MyShopController> {
                         padding: const EdgeInsets.only(top: 10),
                         child: SingleChildScrollView(
                           controller: scrollpageController.scrollController,
-                          // <<< 2. แก้ไข Padding ---
-                          padding: const EdgeInsets.all(0.0), // <<< ใช้ Padding 0
-                          child: Column( // <<< 3. เพิ่ม Column ครอบ
+                          padding: const EdgeInsets.all(0.0), 
+                          child: Column( 
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              // --- Widget 1: Toggle Bar ---
-                              const MyShopToggleBar(), // <<< 4. เพิ่มปุ่มสลับหน้า
+                              // <<< Row จัด ToggleBar (กลาง) และ Bell (ขวา) >>>
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16.0), 
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    // 2.1 Placeholder (เพื่อให้ ToggleBar อยู่ตรงกลาง)
+                                    const SizedBox(width: 40), 
+
+                                    // 2.2 ToggleBar (ใช้ Expanded เพื่อให้ ToggleBar กว้างพอ)
+                                    const Expanded(
+                                      child: MyShopToggleBar()
+                                    ), 
+
+                                    // 2.3 Notification Bell (อยู่ขวา)
+                                    const NotificationBellPopup(),
+                                  ],
+                                ),
+                              ),
+                              // <<< สิ้นสุด Row >>>
                               
-                              // --- Widget 2: Content (สลับตาม View) ---
-                              Obx(() { // <<< 5. เพิ่ม Obx
-                                // แยก Padding ลงไปใน child แต่ละอัน
+                              // --- Content ---
+                              Obx(() { 
                                 if (controller.currentView.value == MyShopView.shops) {
                                   return const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 16.0),
-                                    child: Showshopcard(), // <<< หน้าเดิม
+                                    padding: EdgeInsets.symmetric(horizontal: 16.0), 
+                                    child: Showshopcard(), 
                                   );
                                 } else {
                                   return const Padding(
-                                    padding: EdgeInsets.symmetric(horizontal: 16.0),
-                                    child: MyShopRequestList(), // <<< หน้าใหม่
+                                    padding: EdgeInsets.symmetric(horizontal: 16.0), 
+                                    child: MyShopRequestList(), 
                                   );
                                 }
                               }),
@@ -88,7 +104,6 @@ class MyShopPage extends GetView<MyShopController> {
             ],
           ),
         ),
-        // (Floating Action Button ... เหมือนเดิม)
         floatingActionButton: FloatingActionButton(
           onPressed: () {
             Get.toNamed(AppRoutes.ADDRESTAURANT); 
