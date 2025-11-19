@@ -1,11 +1,10 @@
-// lib/app/ui/pages/edit_restaurant_detail_page/edit_restaurant_detail_page.dart
+// lib.zip/app/ui/pages/edit_restaurant_detail_page/edit_restaurant_detail_page.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-// import 'package:get/state_manager.dart'; // ไม่จำเป็น
 
 import '../../global_widgets/back3_bt.dart';
 import '../../global_widgets/bt_scrolltop.dart';
-import '../restaurant_detail_page/widgets/scrollctrl.dart'; // Import ScrollpageController
+import '../restaurant_detail_page/widgets/scrollctrl.dart'; 
 import 'edit_restaurant_detail_controller.dart';
 import 'widgets/eddt_form_edit.dart';
 import 'widgets/eddt_head_text.dart';
@@ -14,7 +13,6 @@ import 'widgets/eddt_save_bt.dart';
 
 class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> {
   final String restaurantId;
-  // ใช้ const constructor
   const EditRestaurantDetailsPage({super.key, required this.restaurantId});
 
   @override
@@ -30,7 +28,6 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
     return GestureDetector(
       onTap: () => FocusScope.of(context).unfocus(), 
       child: Scaffold(
-        // (AppBar ... เหมือนเดิม)
         appBar: AppBar(
           backgroundColor: Colors.pink[200],
           leading: const Back3Bt(), 
@@ -47,7 +44,6 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
             ),
           ),
         ),
-        // (Body ... Stack ... Container ... Column ... เหมือนเดิม)
         body: Stack( 
           children: [
             Container(
@@ -61,7 +57,8 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
               ),
               child: Column( 
                 children: [
-                  Container( height: 50 ),
+                  // (Container(height: 50) ถูกลบไปแล้ว)
+                  
                   Expanded(
                     child: Container(
                       width: double.infinity,
@@ -85,16 +82,19 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 const SizedBox(height: 20),
-                                const EdDtHeadText(), 
+                                
+                                // <<<--- [TASK 24.2 - เริ่มแก้ไข] ---
+                                // (ส่ง title เข้าไป)
+                                const EdDtHeadText(title: "แก้ไขข้อมูลร้าน"), 
+                                // <<<--- [TASK 24.2 - สิ้นสุดการแก้ไข] ---
+                                
                                 const SizedBox(height: 20),
                                 
-                                // --- [แก้ไข] ---
-                                // ส่ง 'controller' (ที่ได้จาก GetView) เข้าไป
+                                // (Form)
                                 EddtFormEdit(
                                   restaurantId: restaurantId,
-                                  controller: controller, // <<<--- ส่ง Controller
+                                  controller: controller, 
                                 ), 
-                                // --- [สิ้นสุดการแก้ไข] ---
                               ],
                             ),
                           ),
@@ -106,7 +106,6 @@ class EditRestaurantDetailsPage extends GetView<RestaurantEditDetailController> 
               ),
             ),
 
-            // (BtScrollTop ... Positioned ... EddtSaveBt ... เหมือนเดิม)
             BtScrollTop(tag: scrollTag), 
             Positioned(
               bottom: 16,

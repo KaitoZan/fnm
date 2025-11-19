@@ -1,7 +1,8 @@
-// lib/app/ui/pages/my_shop_page/widgets/my_shop_toggle_bar.dart
+// lib.zip/app/ui/pages/my_shop_page/widgets/my_shop_toggle_bar.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../my_shop_controller.dart';
+// Note: ไม่ต้อง Import notification_bell_popup.dart ที่นี่แล้ว
 
 class MyShopToggleBar extends StatelessWidget {
   const MyShopToggleBar({super.key});
@@ -11,9 +12,8 @@ class MyShopToggleBar extends StatelessWidget {
     final MyShopController controller = Get.find<MyShopController>();
     
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      // --- 1. Wrap ToggleButtons ด้วย Center ---
+      // width: double.infinity, // ลบทิ้งแล้ว
+      padding: const EdgeInsets.symmetric(vertical: 12.0), 
       child: Center( 
         child: Obx(() => ToggleButtons(
           isSelected: [
@@ -29,11 +29,9 @@ class MyShopToggleBar extends StatelessWidget {
           fillColor: Colors.pink[300],
           selectedBorderColor: Colors.pink[400],
           borderColor: Colors.pink[200],
-          // --- 2. ลบ constraints ที่คำนวณความกว้างทิ้ง ---
           children: const [
             Padding(
-              // --- 3. เพิ่ม Padding แนวนอนให้ปุ่ม (สำคัญ) ---
-              padding: EdgeInsets.symmetric(horizontal: 24.0), 
+              padding: EdgeInsets.symmetric(horizontal: 12.0), // <<< FIX: ลด Padding ลงเหลือ 12.0
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
@@ -44,8 +42,7 @@ class MyShopToggleBar extends StatelessWidget {
               ),
             ),
             Padding(
-              // --- 3. เพิ่ม Padding แนวนอนให้ปุ่ม (สำคัญ) ---
-              padding: EdgeInsets.symmetric(horizontal: 24.0), 
+              padding: EdgeInsets.symmetric(horizontal: 12.0), // <<< FIX: ลด Padding ลงเหลือ 12.0
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

@@ -42,7 +42,7 @@ class OtpPage extends GetView<OtpController> {
 
                     Blurcontainer(
                       width: MediaQuery.of(context).size.width * 0.88,
-                      // <<<--- [TASK 11.2 - แก้ไข] ลบบรรทัด height
+                      // (height ถูกลบไปแล้ว ดีแล้ว)
                       // height: MediaQuery.of(context).size.height * 0.6,
                       padding: const EdgeInsets.all(10.0),
                       child: Column(
@@ -51,9 +51,18 @@ class OtpPage extends GetView<OtpController> {
                           OtpHeadText(),
                           OtpFormEdit(),
 
-                          Expanded(child: SizedBox()),
+                          // <<<--- [TASK 20 - เริ่มแก้ไข] ---
+                          // (เปลี่ยน Expanded เป็น SizedBox)
+                          // Expanded(child: SizedBox()),
+                          const SizedBox(height: 16), // <<< (แทนที่)
+                          
                           OtpLogo(),
-                          Expanded(child: SizedBox()),
+                          
+                          // (เปลี่ยน Expanded เป็น SizedBox)
+                          // Expanded(child: SizedBox()),
+                          const SizedBox(height: 16), // <<< (แทนที่)
+                          // <<<--- [TASK 20 - สิ้นสุดการแก้ไข] ---
+                          
                           OtpBt(),
                         ],
                       ),

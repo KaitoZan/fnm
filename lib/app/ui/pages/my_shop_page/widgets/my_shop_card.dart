@@ -15,15 +15,13 @@ class MyShopCard extends StatelessWidget {
   final double rating;
   final RxBool isOpen; // รับ RxBool จาก Model
   
-  // <<<--- [TASK 17.1 - เริ่มแก้ไข] ---
-  // final bool showMotorcycleIcon; // (ลบ)
+  final String status; // <<< 1. [เพิ่ม] รับ status string
+
   final bool hasDelivery; // (เพิ่ม)
   final bool hasDineIn; // (เพิ่ม)
-  // <<<--- [สิ้นสุดการแก้ไข] ---
   
   final VoidCallback? onTap;
-  // --- เปลี่ยน shopId เป็น String (UUID) ---
-  final String shopId; // <<<--- แก้ไข Type เป็น String
+  final String shopId; // <<< รับ String
 
   const MyShopCard({
     super.key,
@@ -32,17 +30,20 @@ class MyShopCard extends StatelessWidget {
     required this.description,
     this.rating = 0.0,
     required this.isOpen,
-    // this.showMotorcycleIcon = false, // <<<--- [TASK 17.1 - แก้ไข] (ลบ)
-    required this.hasDelivery, // (เพิ่ม)
-    required this.hasDineIn, // (เพิ่ม)
+    required this.status, // <<< 2. [เพิ่ม] status string
+    required this.hasDelivery,
+    required this.hasDineIn,
     this.onTap,
-    required this.shopId, // <<<--- รับ String
+    required this.shopId,
   });
 
   @override
   Widget build(BuildContext context) {
     final MyShopController myShopController = Get.find<MyShopController>();
-
+    
+    // 3. ตรวจสอบสถานะ
+    final bool isSuspended = status == 'suspended';
+    
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 8.0),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15.0)),
@@ -50,7 +51,7 @@ class MyShopCard extends StatelessWidget {
       child: Container(
         decoration: BoxDecoration(borderRadius: BorderRadius.circular(15.0)),
         child: InkWell(
-          onTap: onTap, // Callback ที่ส่งมาจาก Showshopcard
+          onTap: onTap, 
           borderRadius: BorderRadius.circular(15.0),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
@@ -78,50 +79,72 @@ class MyShopCard extends StatelessWidget {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
+                          // 1. Star Rating
                           StarRating( rating: rating, size: 10, onRatingChanged: (newRating) {} ),
                           
-                          // <<<--- [TASK 17.1 - เริ่มแก้ไข] ---
-                          // (แก้ไขการเรียก StatusTag)
-                          Obx(() => StatusTag( 
-                            isOpen: isOpen.value, 
-                            // showMotorcycleIcon: showMotorcycleIcon, // (ลบ)
-                            hasDelivery: hasDelivery, // (เพิ่ม)
-                            hasDineIn: hasDineIn, // (เพิ่ม)
-                            iconSize: 16, 
-                            showOpenStatus: false
-                          )),
-                          // <<<--- [TASK 17.1 - สิ้นสุดการแก้ไข] ---
-                          
-                          // --- ส่วน Switch เปิด/ปิดร้าน ---
-                          Obx(() => Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Text( isOpen.value ? "เปิด" : "ปิด", style: TextStyle( fontSize: 14, fontWeight: FontWeight.bold, color: isOpen.value ? Colors.green : Colors.red,)),
-                                Transform.scale(
-                                  scale: 0.8,
-                                  child: Switch.adaptive(
-                                    value: isOpen.value,
-                                    onChanged: (newValue) {
-                                      // --- ส่ง shopId (String) ไปที่ Controller ---
-                                      myShopController.toggleShopStatus(shopId, newValue); // <<<--- ส่ง String ID
-                                    },
-                                    activeColor: Colors.green, inactiveThumbColor: Colors.red, inactiveTrackColor: Colors.red.shade100,
-                                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          // 2. Status Icons + Toggle/Request Button
+                          Row( 
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 2.1 Status Icons (Dine-in/Delivery)
+                              Obx(() => StatusTag( 
+                                isOpen: isOpen.value, 
+                                hasDelivery: hasDelivery, 
+                                hasDineIn: hasDineIn, 
+                                iconSize: 20, 
+                                showOpenStatus: false // <<< FIX: ไม่แสดงสถานะเปิด/ปิด
+                              )),
+                              
+                              const SizedBox(width: 8), // Spacing between icons and switch/button
+
+                              // 2.2 Action: Switch or Request Button
+                              isSuspended 
+                                ? // ถ้าถูกระงับ: แสดงปุ่มขออนุมัติซ้ำ
+                                  SizedBox(
+                                    width: 140, // กำหนดความกว้างให้ปุ่ม
+                                    height: 35,
+                                    child: ElevatedButton(
+                                      onPressed: () => myShopController.requestReapproval(shopId),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.orange.shade700,
+                                        padding: EdgeInsets.zero,
+                                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8.0)),
+                                      ),
+                                      child: const Text('ขออนุมัติซ้ำ', style: TextStyle(fontSize: 12, color: Colors.white)),
+                                    ),
+                                  )
+                                : // ถ้าปกติ: แสดง Switch เปิด/ปิด
+                                  Obx(() => Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text( isOpen.value ? "เปิด" : "ปิด", style: TextStyle( fontSize: 14, fontWeight: FontWeight.bold, color: isOpen.value ? Colors.green : Colors.red,)),
+                                        Transform.scale(
+                                          scale: 0.8,
+                                          child: Switch.adaptive(
+                                            value: isOpen.value,
+                                            onChanged: (newValue) {
+                                              myShopController.toggleShopStatus(shopId, newValue); 
+                                            },
+                                            activeColor: Colors.green, inactiveThumbColor: Colors.red, inactiveTrackColor: Colors.red.shade100,
+                                            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
                                   ),
-                                ),
-                              ],
-                            ),
+                            ],
                           ),
                         ],
                       ),
                     ],
                   ),
                 ),
-              ],
+                ],
+              ),
             ),
           ),
         ),
-      ),
+      
     );
   }
 }

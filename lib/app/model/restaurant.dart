@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'menu_item.dart';
 
 class Restaurant {
-  // ... (Fields: id, imageUrl, ownerId, restaurantName, description, rating, isOpen) ...
   final String id;
   final String? imageUrl;
   final String? ownerId;
@@ -13,10 +12,10 @@ class Restaurant {
   final double rating;
   final RxBool isOpen;
   
-  // <<<--- 1. [แก้ไข] เปลี่ยนชื่อ Field ให้ตรงกับ DB
-  // final bool showMotorcycleIcon; // (ชื่อเดิม)
-  final bool hasDelivery; // (ชื่อใหม่)
-  final bool hasDineIn; // <<< [เพิ่ม]
+  final String status; // <<< 1. [เพิ่ม] Field status (approved, pending, suspended)
+
+  final bool hasDelivery; 
+  final bool hasDineIn; 
   
   final String? detail; 
   final String? openingHours;
@@ -41,9 +40,9 @@ class Restaurant {
     required this.description,
     required this.rating,
     required bool isOpen,
-    // required this.showMotorcycleIcon, // <<< 2. [แก้ไข]
-    required this.hasDelivery, // <<< [แก้ไข]
-    required this.hasDineIn, // <<< [เพิ่ม]
+    required this.status, // <<< 2. [เพิ่ม] status
+    required this.hasDelivery, 
+    required this.hasDineIn, 
     this.detail,
     this.openingHours,
     this.phoneNumber,
@@ -62,18 +61,16 @@ class Restaurant {
   // *** แก้ไข Factory fromSupabaseMap ***
   factory Restaurant.fromSupabaseMap(Map<String, dynamic> map, bool isCurrentlyFavorite) {
 
-    // (ส่วนประมวลผล menus ... เหมือนเดิม)
     final List<dynamic> menuData = map['menus'] as List<dynamic>? ?? [];
     final List<MenuItem> fullMenuItems = menuData
         .map((menuMap) => MenuItem.fromMap(menuMap as Map<String, dynamic>))
         .toList();
 
-    // (ดึง Lat/Lng, is_open - เหมือนเดิม)
     double? lat = (map['latitude'] as num?)?.toDouble();
     double? lng = (map['longitude'] as num?)?.toDouble();
     bool currentIsOpen = map['is_open'] as bool? ?? false;
+    String currentStatus = map['status'] as String? ?? 'pending'; // <<< 3. [แก้ไข] ดึง status
 
-    // (ส่วนจัดการ promo_imgs_urls - เหมือนเดิม)
     List<String> promotionList = [];
     final dynamic promoData = map['promo_imgs_urls'];
     if (promoData is List) {
@@ -82,16 +79,14 @@ class Restaurant {
       promotionList = [promoData];
     }
     
-    // (ส่วนจัดการ gallery_imgs_urls - เหมือนเดิม)
     List<String> galleryList = [];
-    final dynamic galleryData = map['gallery_imgs_urls']; // <<< Field ใหม่
+    final dynamic galleryData = map['gallery_imgs_urls'];
     if (galleryData is List) {
       galleryList = List<String>.from(galleryData.whereType<String>());
     } else if (galleryData is String && galleryData.isNotEmpty) {
       galleryList = [galleryData];
     }
 
-    // สร้าง Instance
     return Restaurant(
       id: map['id'] as String,
       imageUrl: map['res_img'] as String?,
@@ -100,9 +95,9 @@ class Restaurant {
       description: map['description'] as String? ?? '',
       rating: (map['rating'] as num?)?.toDouble() ?? 0.0,
       isOpen: currentIsOpen,
-      // showMotorcycleIcon: map['has_delivery'] as bool? ?? false, // <<< 3. [แก้ไข]
-      hasDelivery: map['has_delivery'] as bool? ?? false, // <<< [แก้ไข]
-      hasDineIn: map['has_dine_in'] as bool? ?? false, // <<< [เพิ่ม]
+      status: currentStatus, // <<< 4. [เพิ่ม] status
+      hasDelivery: map['has_delivery'] as bool? ?? false, 
+      hasDineIn: map['has_dine_in'] as bool? ?? false,
       detail: map['detail'] as String?,
       openingHours: map['opening_hours']?.toString(),
       phoneNumber: map['phone_no'] as String?,
@@ -117,7 +112,7 @@ class Restaurant {
     );
   }
 
-  // 4. [แก้ไข] copyWith
+  // *** แก้ไข copyWith ***
   Restaurant copyWith({
     String? id,
     String? imageUrl,
@@ -126,9 +121,9 @@ class Restaurant {
     String? description,
     double? rating,
     bool? isOpen,
-    // bool? showMotorcycleIcon, // <<< 5. [แก้ไข]
-    bool? hasDelivery, // <<< [แก้ไข]
-    bool? hasDineIn, // <<< [เพิ่ม]
+    String? status, // <<< 5. [เพิ่ม] status
+    bool? hasDelivery, 
+    bool? hasDineIn, 
     String? detail,
     String? openingHours,
     String? phoneNumber,
@@ -150,9 +145,9 @@ class Restaurant {
       description: description ?? this.description,
       rating: rating ?? this.rating,
       isOpen: isOpen ?? this.isOpen.value,
-      // showMotorcycleIcon: showMotorcycleIcon ?? this.showMotorcycleIcon, // <<< 6. [แก้ไข]
-      hasDelivery: hasDelivery ?? this.hasDelivery, // <<< [แก้ไข]
-      hasDineIn: hasDineIn ?? this.hasDineIn, // <<< [เพิ่ม]
+      status: status ?? this.status, // <<< 6. [เพิ่ม] status
+      hasDelivery: hasDelivery ?? this.hasDelivery, 
+      hasDineIn: hasDineIn ?? this.hasDineIn, 
       detail: detail ?? this.detail,
       openingHours: openingHours ?? this.openingHours,
       phoneNumber: phoneNumber ?? this.phoneNumber,

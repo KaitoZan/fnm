@@ -1,4 +1,4 @@
-// lib/app/ui/pages/add_restaurant_page/add_restaurant_page.dart
+// lib.zip/app/ui/pages/add_restaurant_page/add_restaurant_page.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -9,7 +9,9 @@ import '../restaurant_detail_page/widgets/scrollctrl.dart';
 import 'add_restaurant_controller.dart'; 
 import 'widgets/add_form_edit.dart';
 
-// import '../edit_restaurant_detail_page/widgets/eddt_form_edit.dart'; // <<<--- 2. ลบ Import เดิม
+// <<<--- [TASK 24.3 - เพิ่ม] Import
+import '../edit_restaurant_detail_page/widgets/eddt_head_text.dart'; 
+// <<<--- [สิ้นสุดการเพิ่ม]
 
 
 class AddRestaurantPage extends GetView<AddRestaurantController> {
@@ -30,8 +32,13 @@ class AddRestaurantPage extends GetView<AddRestaurantController> {
         appBar: AppBar(
           backgroundColor: Colors.pink[200],
           leading: const Back3Bt(),
-          title: const Text('เพิ่มร้านค้าใหม่'), // <<<--- Title ใหม่
-          centerTitle: true,
+          
+          // <<<--- [TASK 24.3 - เริ่มแก้ไข] ---
+          // (ลบ title และ centerTitle ออก)
+          // title: const Text('เพิ่มร้านค้าใหม่'), 
+          // centerTitle: true,
+          // <<<--- [TASK 24.3 - สิ้นสุดการแก้ไข] ---
+          
           toolbarHeight: kToolbarHeight + 16,
           automaticallyImplyLeading: false,
           flexibleSpace: Container( // Gradient Background
@@ -60,8 +67,8 @@ class AddRestaurantPage extends GetView<AddRestaurantController> {
               ),
               child: Column( 
                 children: [
-                  // --- ส่วนบน (Gradient) ---
-                  Container( height: 50 ),
+                  // (Container(height: 50) ถูกลบไปแล้ว)
+                  
                   // --- ส่วนล่าง (เนื้อหาสีขาวขอบมน) ---
                   Expanded(
                     child: Container(
@@ -82,8 +89,14 @@ class AddRestaurantPage extends GetView<AddRestaurantController> {
                               crossAxisAlignment: CrossAxisAlignment.center,
                               children: [
                                 const SizedBox(height: 20),
-                                // --- 3. ใช้ Widget ใหม่ ---
-                                const AddFormEdit(), // <<<--- ใช้ Widget ใหม่ ไม่ต้องส่ง ID
+                                
+                                // <<<--- [TASK 24.3 - เริ่มแก้ไข] ---
+                                // (เพิ่ม Title ที่นี่)
+                                const EdDtHeadText(title: "เพิ่มร้านค้าใหม่"),
+                                const SizedBox(height: 20), // (เพิ่มระยะห่าง)
+                                // <<<--- [TASK 24.3 - สิ้นสุดการแก้ไข] ---
+                                
+                                const AddFormEdit(), 
                                 const SizedBox(height: 30),
                               ],
                             ),
@@ -107,7 +120,7 @@ class AddRestaurantPage extends GetView<AddRestaurantController> {
                 () => ElevatedButton(
                   onPressed: controller.isLoading.value
                       ? null
-                      : () => controller.saveNewRestaurant(), // <<<--- เรียกฟังก์ชัน INSERT
+                      : () => controller.saveNewRestaurant(), 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.pink[400],
                     padding: const EdgeInsets.symmetric(vertical: 12.0),

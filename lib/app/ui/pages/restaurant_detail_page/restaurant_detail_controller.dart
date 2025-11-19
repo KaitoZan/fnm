@@ -1,18 +1,55 @@
-// lib.zip/app/ui/pages/restaurant_detail_page/restaurant_detail_controller.dart
+// lib/app/ui/pages/restaurant_detail_page/restaurant_detail_controller.dart
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-// <<<--- [TASK 18 - เพิ่ม] Import (สำหรับ CachedNetworkImage)
 import 'package:cached_network_image/cached_network_image.dart';
-
 
 import '../../../routes/app_routes.dart';
 import '../../global_widgets/filter_ctrl.dart';
-import '../../../model/restaurant.dart'; // <<<--- Import Model ที่แก้ไขแล้ว
-import '../../../model/menu_item.dart'; // <<<--- [TASK 18 - เพิ่ม] Import (สำหรับ CommentModel)
+import '../../../model/restaurant.dart';
+import '../../../model/menu_item.dart';
 import '../login_page/login_controller.dart';
+
+// (Comment Model - เหมือนเดิม)
+class CommentModel {
+  final int id; 
+  final String userId;
+  final String content;
+  final int ratingScore;
+  final DateTime createdAt;
+  final String userName;
+  final String? userAvatarUrl;
+
+  CommentModel({
+    required this.id,
+    required this.userId,
+    required this.content,
+    required this.ratingScore,
+    required this.createdAt,
+    required this.userName,
+    this.userAvatarUrl,
+  });
+
+  factory CommentModel.fromMap(Map<String, dynamic> map) {
+    final profileData = map['user_profiles'] as Map<String, dynamic>?; 
+
+    return CommentModel(
+      id: map['id'] as int,
+      userId: map['user_id'] as String? ?? '',
+      content: map['content'] as String? ?? '',
+      ratingScore: (map['rating_score'] as num?)?.toInt() ?? 0,
+      createdAt:
+          DateTime.tryParse(map['created_at'] as String? ?? '') ??
+          DateTime.now(),
+      userName:
+          profileData?['user_name'] as String? ?? 'ผู้ใช้',
+      userAvatarUrl: profileData?['avatar_url'] as String?,
+    );
+  }
+}
+
 
 class RestaurantDetailController extends GetxController {
   final LoginController loginController = Get.find<LoginController>();
@@ -23,14 +60,12 @@ class RestaurantDetailController extends GetxController {
   final TextEditingController commentController = TextEditingController();
   final RxDouble userRating = 0.0.obs;
 
-  // --- 1. restaurantId เป็น String (uuid) ---
   final String restaurantId;
 
   // State ร้านและรีวิว
   final Rx<Restaurant?> restaurant = Rx<Restaurant?>(null);
   final RxBool isDeleting = false.obs;
-  final RxList<CommentModel> reviews =
-      <CommentModel>[].obs; // <<<--- ใช้ Model ที่แก้ไขแล้ว
+  final RxList<CommentModel> reviews = <CommentModel>[].obs; 
   final RxBool isLoadingReviews = false.obs;
 
   // Controller Report
@@ -43,8 +78,6 @@ class RestaurantDetailController extends GetxController {
   void onInit() {
     super.onInit();
     _filterController = Get.find<FilterController>();
-    // --- 2. ไม่ต้องแปลง ID ---
-
     loadRestaurantDetails();
     _loadReviews();
   }
@@ -62,17 +95,15 @@ class RestaurantDetailController extends GetxController {
     _loadReviews();
   }
 
-  // --- 3. loadRestaurantDetails (ใช้ ID String) ---
+  // loadRestaurantDetails
   void loadRestaurantDetails() {
-    // ใช้ ID (String uuid) ในการหา
     final newRestaurantInstance = _filterController.allRestaurantsObservable
         .firstWhereOrNull(
           (res) => res.id == restaurantId,
-        ); // <<<--- ID (String)
+        );
 
-    restaurant.value = newRestaurantInstance; // อัปเดต State
+    restaurant.value = newRestaurantInstance; 
 
-    // จัดการกรณีไม่เจอร้าน
     if (restaurant.value == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (Get.currentRoute.startsWith(AppRoutes.RESTAURANTDETAIL)) {
@@ -95,7 +126,7 @@ class RestaurantDetailController extends GetxController {
     userRating.value = newRating;
   }
 
-  // --- 4. deleteRestaurant (ใช้ restaurantName และ ID String) ---
+  // deleteRestaurant
   void deleteRestaurant() {
     if (restaurant.value == null) {
       Get.snackbar('ข้อผิดพลาด', 'ไม่สามารถลบ: ไม่พบข้อมูลร้านค้า');
@@ -103,9 +134,9 @@ class RestaurantDetailController extends GetxController {
     }
 
     final String restaurantName =
-        restaurant.value!.restaurantName; // <<<--- restaurantName
+        restaurant.value!.restaurantName;
     final String currentRestaurantId =
-        restaurant.value!.id; // <<<--- ID (String)
+        restaurant.value!.id;
 
     Get.defaultDialog(
       title: "ยืนยันการลบ",
@@ -133,22 +164,20 @@ class RestaurantDetailController extends GetxController {
                     ),
                   ),
                 ),
-                ElevatedButton(
+                Obx(() => ElevatedButton( // Wrap ElevatedButton in Obx to track isDeleting state
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: () async {
+                  onPressed: isDeleting.value ? null : () async { // Disable button while deleting
                     isDeleting.value = true;
                     Get.back();
                     try {
-                      // --- ใช้ ID (String uuid) ในการลบ ---
                       await supabase
                           .from('restaurants')
                           .delete()
-                          .eq('id', currentRestaurantId); // <<<--- ID (String)
+                          .eq('id', currentRestaurantId);
 
-                      // ลบออกจาก FilterController (ส่ง String ID)
                       _filterController.removeRestaurantFromList(restaurantId);
 
                       Get.back(); // กลับไปหน้าก่อนหน้า (Home/MyShop)
@@ -173,8 +202,8 @@ class RestaurantDetailController extends GetxController {
                       isDeleting.value = false;
                     }
                   },
-                  child: const Text("ยืนยัน"),
-                ),
+                  child: isDeleting.value ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text("ยืนยัน"),
+                )),
               ],
             ),
           ),
@@ -183,11 +212,10 @@ class RestaurantDetailController extends GetxController {
     );
   }
 
-  // --- 5. _loadReviews (เพิ่ม 'user_id' เข้า Select) ---
+  // _loadReviews
   Future<void> _loadReviews() async {
     isLoadingReviews.value = true;
     try {
-      // --- เพิ่ม 'user_id' ---
       final List<Map<String, dynamic>> data = await supabase
           .from('comments')
           .select('''
@@ -200,11 +228,10 @@ class RestaurantDetailController extends GetxController {
  			  user_name,
  			  avatar_url
  			)
- 		  ''') // <<<--- เพิ่ม user_id
-          .eq('res_id', restaurantId) // <<<--- res_id (String)
+ 		  ''')
+          .eq('res_id', restaurantId)
           .order('created_at', ascending: false);
 
-      // Map เป็น CommentModel (ใช้ Model ที่แก้ไขแล้ว)
       reviews.assignAll(data.map((map) => CommentModel.fromMap(map)).toList());
     } catch (e) {
       print("Error loading reviews: $e");
@@ -214,7 +241,7 @@ class RestaurantDetailController extends GetxController {
     }
   }
 
-  // --- 6. submitReview (ใช้ 'res_id') ---
+  // submitReview
   void submitReview() async {
     if (loginController.isLoggedIn.value) {
       if (commentController.text.trim().isNotEmpty && userRating.value > 0) {
@@ -223,17 +250,16 @@ class RestaurantDetailController extends GetxController {
         final int ratingScore = userRating.value.toInt();
 
         try {
-          // --- ใช้ 'res_id' (String) ---
           await supabase.from('comments').insert({
             'user_id': currentUserId,
-            'res_id': restaurantId, // <<<--- res_id (String)
+            'res_id': restaurantId,
             'content': commentContent,
             'rating_score': ratingScore,
           });
 
           commentController.clear();
           userRating.value = 0.0;
-          _loadReviews(); // โหลดรีวิวใหม่
+          _loadReviews();
           Get.snackbar(
             'ส่งรีวิวแล้ว',
             'รีวิวของคุณถูกส่งเรียบร้อยแล้วค่ะ!',
@@ -278,14 +304,12 @@ class RestaurantDetailController extends GetxController {
     }
   }
 
-  // --- (ฟังก์ชันลบคอมเมนต์ (TASK 2) ... เหมือนเดิม) ---
+  // deleteComment
   void deleteComment(int commentId) async {
     if (!loginController.isLoggedIn.value) {
       Get.snackbar('ข้อผิดพลาด', 'กรุณาเข้าสู่ระบบ');
       return;
     }
-
-    // (Policy RLS จะตรวจสอบเองว่าเป็นเจ้าของหรือไม่)
 
     Get.defaultDialog(
       title: "ยืนยันการลบ",
@@ -298,7 +322,6 @@ class RestaurantDetailController extends GetxController {
       onConfirm: () async {
         Get.back(); // ปิด Dialog
         try {
-          // RLS Policy ("Allow owner or admin delete on comments") จะทำงาน
           await supabase
               .from('comments')
               .delete()
@@ -329,14 +352,12 @@ class RestaurantDetailController extends GetxController {
     );
   }
 
-
-  // เปิดแผนที่
+  // launchMap
   Future<void> launchMap(double? lat, double? lng, String label) async {
     if (lat == null || lng == null) {
       Get.snackbar('ข้อผิดพลาด', 'ไม่พบข้อมูลพิกัดสำหรับร้านนี้');
       return;
     }
-    // (Note: This URL seems incorrect, but keeping it as per original code)
     final String googleMapsUrl =
         'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
     final Uri url = Uri.parse(googleMapsUrl);
@@ -351,9 +372,7 @@ class RestaurantDetailController extends GetxController {
     }
   }
 
-  // <<<--- [TASK 18 - เริ่มแก้ไข] ---
-  
-  // --- 7. (แก้ไข) showReportDialog (สำหรับ Comment) ---
+  // showReportDialog (Comment)
   void showReportDialog(int commentId) {
     if (!loginController.isLoggedIn.value) {
       Get.snackbar('แจ้งเตือน', 'กรุณาเข้าสู่ระบบ...');
@@ -361,7 +380,6 @@ class RestaurantDetailController extends GetxController {
     }
     reportReasonController.clear();
     
-    // (ตัวแปรสำหรับจัดการ State ภายใน Dialog)
     String? selectedReason; 
     final String otherReasonKey = "อื่นๆ";
     final List<String> commentReportOptions = [
@@ -374,56 +392,60 @@ class RestaurantDetailController extends GetxController {
       title: 'แจ้งปัญหาคอมเมนต์',
       titleStyle: const TextStyle(fontWeight: FontWeight.bold),
       
-      // --- ใช้ StatefulBuilder เพื่อจัดการ State ของ Radio และ TextField ---
       content: StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text('โปรดเลือกเหตุผลในการแจ้งปัญหา:'),
-              ),
-              const SizedBox(height: 8),
-              
-              // (สร้าง RadioListTile จาก List)
-              ...commentReportOptions.map((reason) {
-                return RadioListTile<String>(
-                  title: Text(reason),
-                  value: reason,
-                  groupValue: selectedReason,
-                  onChanged: (value) {
-                    setState(() {
-                      selectedReason = value;
-                    });
-                  },
-                  dense: true,
-                );
-              }).toList(),
-              
-              // (แสดง TextField ถ้าเลือก "อื่นๆ")
-              if (selectedReason == otherReasonKey)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
-                  child: TextField(
-                    controller: reportReasonController, // ใช้ Controller ของคลาสหลัก
-                    maxLines: 2,
-                    autofocus: true, // Focus ทันทีที่แสดง
-                    decoration: const InputDecoration(
-                      hintText: 'โปรดระบุเหตุผล...',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(12.0),
-                    ),
+          return Container(
+            constraints: BoxConstraints(maxHeight: Get.height * 0.75), 
+            child: SingleChildScrollView( 
+              padding: const EdgeInsets.only(top: 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text('โปรดเลือกเหตุผลในการแจ้งปัญหา:'),
                   ),
-                ),
-            ],
+                  const SizedBox(height: 8),
+                  
+                  // (สร้าง RadioListTile จาก List)
+                  ...commentReportOptions.map((reason) {
+                    return RadioListTile<String>(
+                      title: Text(reason),
+                      value: reason,
+                      groupValue: selectedReason,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedReason = value;
+                        });
+                      },
+                      dense: true,
+                    );
+                  }).toList(),
+                  
+                  // (แสดง TextField ถ้าเลือก "อื่นๆ")
+                  if (selectedReason == otherReasonKey)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+                      child: TextField(
+                        controller: reportReasonController, 
+                        maxLines: 2,
+                        autofocus: true, 
+                        decoration: const InputDecoration(
+                          hintText: 'โปรดระบุเหตุผล...',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.all(12.0),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           );
         },
       ),
       confirm: ElevatedButton(
         onPressed: () {
-          // (ตรวจสอบ State ตอนกดยืนยัน)
           if (selectedReason == null) {
             Get.snackbar('ข้อผิดพลาด', 'กรุณาเลือกเหตุผล...');
             return;
@@ -435,7 +457,6 @@ class RestaurantDetailController extends GetxController {
               Get.snackbar('ข้อผิดพลาด', 'กรุณาระบุเหตุผลในช่อง "อื่นๆ"...');
               return;
             }
-            // (รวมเหตุผล)
             finalReason = "$otherReasonKey: ${reportReasonController.text.trim()}";
           } else {
             finalReason = selectedReason!;
@@ -443,7 +464,7 @@ class RestaurantDetailController extends GetxController {
           
           Get.back(); // ปิด Dialog
           _submitReport(
-            finalReason, // <<< ส่งเหตุผลที่สร้างใหม่
+            finalReason, 
             commentId: commentId,
           );
         },
@@ -457,7 +478,7 @@ class RestaurantDetailController extends GetxController {
     );
   }
 
-  // --- 8. (แก้ไข) showReportRestaurantDialog (สำหรับ Restaurant) ---
+  // showReportRestaurantDialog (Restaurant)
   void showReportRestaurantDialog() {
     if (!loginController.isLoggedIn.value) {
       Get.snackbar('แจ้งเตือน', 'กรุณาเข้าสู่ระบบ...');
@@ -465,10 +486,8 @@ class RestaurantDetailController extends GetxController {
     }
     reportReasonController.clear();
     
-    // (ตัวแปรสำหรับจัดการ State ภายใน Dialog)
     String? selectedReason; 
     final String otherReasonKey = "อื่นๆ";
-    // (ใช้เหตุผลคนละชุดกับ Comment)
     final List<String> restaurantReportOptions = [
         "ข้อมูลร้านไม่ถูกต้อง (เช่น เบอร์, เวลาเปิด)", 
         "ร้านปิดถาวรแล้ว",
@@ -477,59 +496,64 @@ class RestaurantDetailController extends GetxController {
     ];
 
     Get.defaultDialog(
-      title: 'แจ้งปัญหาร้านค้า', // <<< แก้ไข Title
+      title: 'แจ้งปัญหาร้านค้า', 
       titleStyle: const TextStyle(fontWeight: FontWeight.bold),
       
-      // --- ใช้ StatefulBuilder ---
       content: StatefulBuilder(
         builder: (BuildContext context, StateSetter setState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16.0),
-                child: Text('โปรดเลือกเหตุผลในการแจ้งปัญหา:'),
-              ),
-              const SizedBox(height: 8),
-
-              // (สร้าง RadioListTile จาก List)
-              ...restaurantReportOptions.map((reason) {
-                return RadioListTile<String>(
-                  title: Text(reason),
-                  value: reason,
-                  groupValue: selectedReason,
-                  onChanged: (value) {
-                    setState(() {
-                      selectedReason = value;
-                    });
-                  },
-                  dense: true,
-                );
-              }).toList(),
-              
-              // (แสดง TextField ถ้าเลือก "อื่นๆ")
-              if (selectedReason == otherReasonKey)
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
-                  child: TextField(
-                    controller: reportReasonController, // ใช้ Controller ของคลาสหลัก
-                    maxLines: 2,
-                    autofocus: true,
-                    decoration: const InputDecoration(
-                      hintText: 'โปรดระบุปัญหาที่พบ...',
-                      border: OutlineInputBorder(),
-                      contentPadding: EdgeInsets.all(12.0),
-                    ),
+          return Container(
+            constraints: BoxConstraints(maxHeight: Get.height * 0.75), 
+            child: SingleChildScrollView( 
+              padding: const EdgeInsets.only(top: 0),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16.0),
+                    child: Text('โปรดเลือกเหตุผลในการแจ้งปัญหา:'),
                   ),
-                ),
-            ],
+                  const SizedBox(height: 8),
+
+                  // (RadioListTile map loop)
+                  ...restaurantReportOptions.map((reason) {
+                    return RadioListTile<String>(
+                      title: Text(reason),
+                      value: reason,
+                      groupValue: selectedReason,
+                      onChanged: (value) {
+                        setState(() {
+                          selectedReason = value;
+                        });
+                      },
+                      dense: true,
+                    );
+                  }).toList(),
+                  
+                  // (TextField for "อื่นๆ")
+                  if (selectedReason == otherReasonKey)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
+                      child: TextField(
+                        controller: reportReasonController, 
+                        maxLines: 2,
+                        autofocus: true,
+                        decoration: const InputDecoration(
+                          hintText: 'โปรดระบุปัญหาที่พบ...',
+                          border: OutlineInputBorder(),
+                          contentPadding: EdgeInsets.all(12.0),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
           );
         },
       ),
+      
       confirm: ElevatedButton(
         onPressed: () {
-          // (ตรวจสอบ State ตอนกดยืนยัน)
           if (selectedReason == null) {
             Get.snackbar('ข้อผิดพลาด', 'กรุณาเลือกเหตุผล...');
             return;
@@ -548,7 +572,7 @@ class RestaurantDetailController extends GetxController {
           
           Get.back(); // ปิด Dialog
           _submitReport(
-            finalReason, // <<< ส่งเหตุผลที่สร้างใหม่
+            finalReason, 
             resId: restaurantId,
           );
         },
@@ -561,18 +585,16 @@ class RestaurantDetailController extends GetxController {
       ),
     );
   }
-  // <<<--- [TASK 18 - สิ้นสุดการแก้ไข] ---
 
-
-  // --- 9. _submitReport (ไม่ต้องแก้ไข) ---
+  // _submitReport
   Future<void> _submitReport(String reason, {int? commentId, String? resId}) async {
     final String currentUserId = loginController.userId.value;
     try {
       await supabase.from('complaints').insert({
         'reporter_id': currentUserId,
-        'comment_id': commentId, // <<<--- อาจเป็น null
-        'res_id': resId, // <<<--- อาจเป็น null (แต่ใน Logic นี้คือ restaurantId)
-        'reason': reason, // <<<--- รับ "เหตุผล" ที่สร้างใหม่
+        'comment_id': commentId, 
+        'res_id': resId, 
+        'reason': reason, 
         'status': 'pending',
       });
       Get.snackbar(
@@ -595,45 +617,3 @@ class RestaurantDetailController extends GetxController {
   }
 
 } // End of Controller
-
-// --- 9. Comment Model (เพิ่ม 'userId') ---
-class CommentModel {
-  final int id; // bigint
-  final String userId; // <<<--- [เพิ่ม]
-  final String content;
-  final int ratingScore; // smallint (int2)
-  final DateTime createdAt;
-  final String userName; // user_profiles.user_name
-  final String? userAvatarUrl; // user_profiles.avatar_url
-
-  CommentModel({
-    required this.id,
-    required this.userId, // <<<--- [เพิ่ม]
-    required this.content,
-    required this.ratingScore,
-    required this.createdAt,
-    required this.userName,
-    this.userAvatarUrl,
-  });
-
-  // Factory (ใช้ 'user_profiles', 'user_name', 'avatar_url', และ 'user_id')
-  factory CommentModel.fromMap(Map<String, dynamic> map) {
-    // ดึงข้อมูลจากตาราง Join 'user_profiles'
-    final profileData =
-        map['user_profiles'] as Map<String, dynamic>?; // <<<--- user_profiles
-
-    return CommentModel(
-      id: map['id'] as int,
-      userId: map['user_id'] as String? ?? '', // <<<--- [เพิ่ม]
-      content: map['content'] as String? ?? '',
-      ratingScore: (map['rating_score'] as num?)?.toInt() ?? 0,
-      createdAt:
-          DateTime.tryParse(map['created_at'] as String? ?? '') ??
-          DateTime.now(),
-      // ใช้ชื่อคอลัมน์จาก user_profiles
-      userName:
-          profileData?['user_name'] as String? ?? 'ผู้ใช้', // <<<--- user_name
-      userAvatarUrl: profileData?['avatar_url'] as String?, // <<<--- avatar_url
-    );
-  }
-}
