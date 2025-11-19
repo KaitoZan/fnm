@@ -1,9 +1,8 @@
-// lib.zip/app/ui/pages/restaurant_detail_page/widgets/review.dart
+// lib/app/ui/pages/restaurant_detail_page/widgets/review.dart
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:google_fonts/google_fonts.dart';
-// import 'package:food_near_me_app/app/ui/pages/restaurant_detail_page/widgets/detail_menu_ctrl.dart'; // (ไม่จำเป็นต้องใช้ใน Widget นี้แล้ว)
-// <<<--- [TASK 21 - 1. เพิ่ม] Import CachedNetworkImage
 import 'package:cached_network_image/cached_network_image.dart';
 
 import '../../../global_widgets/dotline.dart';
@@ -24,214 +23,132 @@ class Review extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- ส่วนหัว "รีวิวจากลูกค้า" และเส้นประ ---
         Dotline(
-          gradientColors: LinearGradient(
-            colors: [Colors.blue.shade200, Colors.pink.shade200],
-          ),
-          height: 4,
-          dashWidth: 6,
+          gradientColors: LinearGradient(colors: [Colors.blue.shade200, Colors.pink.shade200]),
+          height: 4, dashWidth: 6,
         ),
-        Padding(
-          padding: const EdgeInsets.symmetric(vertical: 15.0),
-          child: Text(
-            "รีวิวจากลูกค้า",
-            style: GoogleFonts.poppins(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.pink[700],
-            ),
-          ),
-        ),
-        Dotline(
-          gradientColors: LinearGradient(
-            colors: [Colors.blue.shade200, Colors.pink.shade200],
-          ),
-          height: 4,
-          dashWidth: 6,
-        ),
-        const SizedBox(height: 20.0),
+        
+        const SizedBox(height: 20),
 
-        // --- ส่วนแสดงผล List รีวิว ---
+        // ==========================================
+        // PART 1: ส่วนให้คะแนนร้าน (Rating Section)
+        // ==========================================
+        Obx(() {
+          final restaurant = controller.restaurant.value;
+          final bool isOwner = loginController.isLoggedIn.value && 
+                               restaurant != null && 
+                               restaurant.ownerId == loginController.userId.value;
+          
+          if (isOwner) {
+             return const SizedBox.shrink(); 
+          }
+          
+          return Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+              boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.1), blurRadius: 5, spreadRadius: 1)],
+              border: Border.all(color: Colors.amber.shade100),
+            ),
+            child: Column(
+              children: [
+                Text("ให้คะแนนร้านนี้", style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Obx(() => controller.isRatingLoading.value 
+                  ? const SizedBox(height: 24, width: 24, child: CircularProgressIndicator(strokeWidth: 2))
+                  : StarRating(
+                      rating: controller.myRating.value, 
+                      size: 40,
+                      onRatingChanged: (value) {
+                        controller.submitRating(value);
+                      },
+                    )
+                ),
+                const SizedBox(height: 8),
+                Obx(() => Text(
+                  controller.myRating.value > 0 ? "คะแนนของคุณ: ${controller.myRating.value.toInt()} ดาว" : "แตะที่ดาวเพื่อให้คะแนน",
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                )),
+              ],
+            ),
+          );
+        }),
+
+        const SizedBox(height: 30),
+        
+        // ==========================================
+        // PART 2: รายการข้อความพูดคุย (Comments List)
+        // ==========================================
+        Text(
+          "พูดคุย / สอบถาม",
+          style: GoogleFonts.poppins(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.pink[700]),
+        ),
+        const SizedBox(height: 15),
+
+        // [แก้ไข 1] กำหนดความสูงแน่นอน (Fixed Height)
         Container(
-          constraints: const BoxConstraints(maxHeight: 400),
+          height: 400, // <<< กำหนดความสูงตายตัวไปเลยตามที่ขอ
           width: double.infinity,
           padding: const EdgeInsets.all(8.0),
           decoration: BoxDecoration(
-            color: Colors.pink.shade50, 
+            color: Colors.pink.shade50,
             borderRadius: BorderRadius.circular(8.0),
           ),
-          child: Obx(() { 
-            // --- แสดง Loading Indicator ---
-            if (controller.isLoadingReviews.value) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            // --- แสดงข้อความ "ยังไม่มีรีวิว" ---
-            else if (controller.reviews.isEmpty) {
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20.0),
-                  child: Text(
-                    "ยังไม่มีรีวิวสำหรับร้านนี้",
-                    style: TextStyle(fontSize: 16.0, fontStyle: FontStyle.italic, color: Colors.grey),
-                  ),
-                ),
-              );
-            }
-            // --- แสดง ListView ของรีวิว ---
-            else {
-              return ListView.builder(
-                shrinkWrap: true, 
-                physics: const AlwaysScrollableScrollPhysics(), 
-                itemCount: controller.reviews.length, 
-                itemBuilder: (context, index) {
-                  final review = controller.reviews[index];
-                  final bool isOwner = loginController.isLoggedIn.value &&
-                                      loginController.userId.value == review.userId;
+          child: Obx(() {
+             if (controller.isLoadingComments.value) {
+               return const Center(child: CircularProgressIndicator());
+             }
+             if (controller.comments.isEmpty) {
+               return const Center(
+                 child: Padding(
+                   padding: EdgeInsets.symmetric(vertical: 20.0),
+                   child: Text(
+                     "ยังไม่มีข้อความพูดคุย\nเริ่มต้นเป็นคนแรกเลย!",
+                     textAlign: TextAlign.center,
+                     style: TextStyle(fontSize: 16.0, fontStyle: FontStyle.italic, color: Colors.grey),
+                   ),
+                 ),
+               );
+             }
+             
+             return ListView.separated(
+               shrinkWrap: true,
+               physics: const AlwaysScrollableScrollPhysics(),
+               itemCount: controller.comments.length,
+               separatorBuilder: (_, __) => const SizedBox(height: 10),
+               itemBuilder: (context, index) {
+                 final comment = controller.comments[index];
+                 final bool isMe = loginController.isLoggedIn.value && 
+                                   loginController.userId.value == comment.userId;
 
-                  return Card( 
-                    margin: const EdgeInsets.only(bottom: 15.0),
-                    elevation: 2, 
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), 
-                    child: Padding(
-                      padding: const EdgeInsets.all(12.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row( 
-                            crossAxisAlignment: CrossAxisAlignment.center, 
-                            children: [
-                              
-                              // <<<--- [TASK 21 - 2. เริ่มแก้ไข] ---
-                              // แสดง Avatar
-                              CircleAvatar(
-                                radius: 18,
-                                backgroundColor: Colors.grey.shade300,
-                                
-                                // (ลบ child: ... ClipOval(child: DetailMenuCtrl(...)) ... )
-                                // child: review.userAvatarUrl != null && review.userAvatarUrl!.isNotEmpty
-                                //       ? ClipOval(child: DetailMenuCtrl(imageUrl: review.userAvatarUrl!, fit: BoxFit.cover))
-                                //       : const Icon(Icons.person, color: Colors.white, size: 24),
-
-                                // (เพิ่ม backgroundImage แทน)
-                                backgroundImage: (review.userAvatarUrl != null && review.userAvatarUrl!.isNotEmpty)
-                                    // (ใช้ CachedNetworkImageProvider)
-                                    ? CachedNetworkImageProvider(review.userAvatarUrl!) 
-                                    : null, // (ถ้าเป็น null, backgroundColor จะทำงาน)
-                                
-                                // (เพิ่ม child: (สำหรับกรณีที่ไม่มีรูป)
-                                child: (review.userAvatarUrl == null || review.userAvatarUrl!.isEmpty)
-                                    ? const Icon(Icons.person, color: Colors.white, size: 24) // ไอคอน Default
-                                    : null, // (ถ้ามีรูป, backgroundImage จะแสดง)
-                              ),
-                              // <<<--- [TASK 21 - 2. สิ้นสุดการแก้ไข] ---
-                              
-                              const SizedBox(width: 10),
-                              // แสดงชื่อผู้ใช้ (ขยายเต็มพื้นที่ที่เหลือ)
-                              Expanded(
-                                child: Text(
-                                  review.userName, // ใช้ userName จาก Model
-                                  style: GoogleFonts.poppins(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 15.0,
-                                  ),
-                                  overflow: TextOverflow.ellipsis, 
-                                  maxLines: 1,
-                                ),
-                              ),
-                              const SizedBox(width: 8), 
-                              
-                              // (ปุ่ม Report - เหมือนเดิม)
-                              if (!isOwner)
-                                IconButton(
-                                  icon: Icon(Icons.flag_outlined, color: Colors.grey.shade600, size: 20),
-                                  padding: EdgeInsets.zero, 
-                                  constraints: const BoxConstraints(), 
-                                  tooltip: 'แจ้งปัญหาคอมเมนต์นี้', 
-                                  onPressed: () {
-                                     controller.showReportDialog(review.id);
-                                  },
-                                ),
-                              
-                              // (ปุ่ม Delete - เหมือนเดิม)
-                              if (isOwner)
-                                IconButton(
-                                  icon: Icon(Icons.delete_outline, color: Colors.red.shade600, size: 20),
-                                  padding: EdgeInsets.zero,
-                                  constraints: const BoxConstraints(),
-                                  tooltip: 'ลบคอมเมนต์นี้',
-                                  onPressed: () {
-                                     controller.deleteComment(review.id);
-                                  },
-                                ),
-
-                              const SizedBox(width: 8), 
-                              // (Rating (ดาว) - เหมือนเดิม)
-                              StarRating(
-                                  rating: review.ratingScore.toDouble(), 
-                                  size: 16 
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 10.0), 
-                          // (เนื้อหาคอมเมนต์ - เหมือนเดิม)
-                          Text(
-                            review.content, 
-                            style: const TextStyle(fontSize: 14.0, color: Colors.black87),
-                          ),
-                          const SizedBox(height: 8.0),
-                           // (วันที่ - เหมือนเดิม)
-                           Align(
-                             alignment: Alignment.centerRight,
-                             child: Text(
-                                review.createdAt.toLocal().toString().substring(0, 16), 
-                                style: const TextStyle(fontSize: 10.0, color: Colors.grey),
-                             ),
-                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            }
+                 // เรียกใช้ Widget แยกที่เราสร้างใหม่ด้านล่าง
+                 return CommentItem(
+                   comment: comment,
+                   isMe: isMe,
+                   controller: controller,
+                 );
+               },
+             );
           }),
         ),
-        const SizedBox(height: 30.0),
 
-        // --- ส่วนเขียนรีวิว ---
+        const SizedBox(height: 30),
+
+        // ==========================================
+        // PART 3: กล่องเขียนข้อความ (Comment Input Box)
+        // ==========================================
         Text(
-          "เขียนรีวิวของคุณ",
-          style: GoogleFonts.poppins(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: Colors.pink[700],
-          ),
+          "เขียนข้อความถึงร้าน",
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.grey[800]),
         ),
-        const SizedBox(height: 15.0),
-        // (StarRating - เหมือนเดิม)
-        Align(
-          alignment: Alignment.centerLeft,
-          child: Row(
-            children: [
-              const Text("ให้คะแนน: ", style: TextStyle(fontSize: 16.0)),
-              Obx( 
-                () => StarRating(
-                  rating: controller.userRating.value, 
-                  size: 24, 
-                  onRatingChanged: controller.onRatingChanged, 
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 15.0),
-        // (TextField - เหมือนเดิม)
+        const SizedBox(height: 10),
         TextField(
-          controller: controller.commentController, 
+          controller: controller.commentController,
           maxLines: 4, 
           decoration: InputDecoration(
-            hintText: "เขียนความคิดเห็นของคุณที่นี่...",
+            hintText: "สอบถามรสชาติ, เมนูแนะนำ หรือพูดคุยกับร้าน...",
             border: OutlineInputBorder( 
               borderRadius: BorderRadius.circular(10.0),
               borderSide: BorderSide(color: Colors.grey.shade400),
@@ -240,32 +157,209 @@ class Review extends StatelessWidget {
               borderRadius: BorderRadius.circular(10.0),
               borderSide: BorderSide(color: Colors.pink.shade400, width: 2.0),
             ),
-            contentPadding: const EdgeInsets.all(15.0), 
+            contentPadding: const EdgeInsets.all(15.0),
+            filled: true,
+            fillColor: Colors.white,
           ),
         ),
-        const SizedBox(height: 20.0),
-        // (ปุ่มส่งรีวิว - เหมือนเดิม)
+        const SizedBox(height: 15),
         Center(
-          child: ElevatedButton(
-            onPressed: controller.submitReview, 
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.pink[400], 
-              padding: const EdgeInsets.symmetric(horizontal: 40, vertical: 15), 
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30.0), 
+          child: ElevatedButton.icon(
+            onPressed: controller.submitComment,
+            icon: const Icon(Icons.send, size: 18),
+            label: Text(
+              "ส่งข้อความ",
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
               ),
             ),
-            child: Text(
-              "ส่งรีวิว",
-              style: GoogleFonts.poppins(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white, 
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.pink[400],
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 12),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(30.0),
               ),
             ),
           ),
         ),
+        
+        const SizedBox(height: 50),
       ],
+    );
+  }
+}
+
+// =========================================================
+// [สร้างใหม่] Widget สำหรับแสดงแต่ละคอมเมนต์ เพื่อจัดการ State "ดูเพิ่มเติม"
+// =========================================================
+class CommentItem extends StatefulWidget {
+  final CommentModel comment;
+  final bool isMe;
+  final RestaurantDetailController controller;
+
+  const CommentItem({
+    super.key,
+    required this.comment,
+    required this.isMe,
+    required this.controller,
+  });
+
+  @override
+  State<CommentItem> createState() => _CommentItemState();
+}
+
+class _CommentItemState extends State<CommentItem> {
+  bool isExpanded = false; // สถานะว่ากดขยายหรือยัง
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      // [แก้ไข 2.1] จัดตำแหน่ง: ถ้าเป็นเราชิดขวา (หรือซ้ายก็ได้แล้วแต่ดีไซน์) แต่ใช้ Align เพื่อไม่ให้ยืดเต็มจอ
+      // ในที่นี้ขอใช้ centerLeft เพื่อให้อ่านง่ายเหมือนเดิม แต่กรอบจะหดตามข้อความ
+      alignment: Alignment.centerLeft, 
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        // [แก้ไข 2.2] กำหนด max-width เพื่อไม่ให้กว้างจนเกินไป (เช่น 80% ของจอ)
+        constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.85),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 2,
+              offset: const Offset(0, 1),
+            ),
+          ],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min, // ให้สูงเท่าเนื้อหา
+          children: [
+            // --- ส่วนหัว (Avatar + ชื่อ + ปุ่มลบ/report) ---
+            Row(
+              mainAxisSize: MainAxisSize.min, // ให้ Row กว้างเท่าเนื้อหาข้างใน
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: Colors.grey.shade300,
+                  backgroundImage: (widget.comment.userAvatarUrl != null && widget.comment.userAvatarUrl!.isNotEmpty)
+                      ? CachedNetworkImageProvider(widget.comment.userAvatarUrl!) 
+                      : null,
+                  child: (widget.comment.userAvatarUrl == null || widget.comment.userAvatarUrl!.isEmpty)
+                      ? const Icon(Icons.person, size: 20, color: Colors.white) : null,
+                ),
+                const SizedBox(width: 10),
+                Flexible( // ใช้ Flexible เพื่อให้ชื่อไม่ดันจนล้นถ้ากรอบแคบ
+                  child: Text(
+                    widget.comment.userName, 
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                
+                const SizedBox(width: 8),
+
+                if (!widget.isMe)
+                  InkWell(
+                    onTap: () => widget.controller.showReportDialog(widget.comment.id),
+                    child: Icon(Icons.flag_outlined, color: Colors.grey.shade400, size: 18),
+                  ),
+
+                if (widget.isMe) 
+                  InkWell(
+                    onTap: () => widget.controller.deleteComment(widget.comment.id),
+                    child: Icon(Icons.delete_outline, color: Colors.red.shade300, size: 18),
+                  ),
+              ],
+            ),
+            
+            // [แก้ไข 3] ลดระยะห่างระหว่างชื่อกับข้อความ (จาก 8 เหลือ 2-4)
+            const SizedBox(height: 4),
+            
+            // --- ส่วนข้อความ และ ปุ่มดูเพิ่มเติม ---
+            Padding(
+              padding: const EdgeInsets.only(left: 0.0), // ไม่ต้อง Indent แล้ว เพราะอยู่ในกรอบเดียวกันสวยกว่า
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  // สร้าง TextSpan เพื่อคำนวณบรรทัด
+                  final span = TextSpan(
+                    text: widget.comment.content,
+                    style: const TextStyle(fontSize: 15, color: Colors.black87),
+                  );
+                  final tp = TextPainter(
+                    text: span,
+                    maxLines: 2, // เช็คที่ 2 บรรทัด
+                    textDirection: TextDirection.ltr,
+                  );
+                  tp.layout(maxWidth: constraints.maxWidth);
+                  
+                  // เช็คว่าข้อความยาวเกิน 2 บรรทัดหรือไม่
+                  final bool isOverflowing = tp.didExceedMaxLines;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.comment.content,
+                        style: const TextStyle(fontSize: 15, color: Colors.black87),
+                        // ถ้ายังไม่กดขยาย ให้โชว์แค่ 2 บรรทัด
+                        maxLines: isExpanded ? null : 2, 
+                        overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                      ),
+                      
+                      // [แก้ไข 2.3] ปุ่มดูเพิ่มเติม
+                      if (isOverflowing && !isExpanded)
+                        GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isExpanded = true;
+                            });
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              "ดูเพิ่มเติม...",
+                              style: TextStyle(color: Colors.blue, fontSize: 12, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ),
+                      
+                      // (Optional) ปุ่มย่อน้อยลง ถ้าต้องการ
+                      if (isExpanded && isOverflowing) 
+                         GestureDetector(
+                          onTap: () {
+                            setState(() {
+                              isExpanded = false;
+                            });
+                          },
+                          child: const Padding(
+                            padding: EdgeInsets.only(top: 4.0),
+                            child: Text(
+                              "ย่อกลับ",
+                              style: TextStyle(color: Colors.grey, fontSize: 12),
+                            ),
+                          ),
+                        ),
+
+                      const SizedBox(height: 4),
+                      Align(
+                        alignment: Alignment.centerRight,
+                        child: Text(
+                          widget.comment.createdAt.toLocal().toString().substring(0, 16), 
+                          style: const TextStyle(fontSize: 10, color: Colors.grey),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

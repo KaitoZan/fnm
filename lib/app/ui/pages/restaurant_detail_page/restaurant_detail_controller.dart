@@ -9,15 +9,12 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../routes/app_routes.dart';
 import '../../global_widgets/filter_ctrl.dart';
 import '../../../model/restaurant.dart';
-import '../../../model/menu_item.dart';
 import '../login_page/login_controller.dart';
 
-// (Comment Model - เหมือนเดิม)
 class CommentModel {
-  final int id; 
+  final int id;
   final String userId;
   final String content;
-  final int ratingScore;
   final DateTime createdAt;
   final String userName;
   final String? userAvatarUrl;
@@ -26,52 +23,45 @@ class CommentModel {
     required this.id,
     required this.userId,
     required this.content,
-    required this.ratingScore,
     required this.createdAt,
     required this.userName,
     this.userAvatarUrl,
   });
 
   factory CommentModel.fromMap(Map<String, dynamic> map) {
-    final profileData = map['user_profiles'] as Map<String, dynamic>?; 
-
+    final profileData = map['user_profiles'] as Map<String, dynamic>?;
     return CommentModel(
       id: map['id'] as int,
       userId: map['user_id'] as String? ?? '',
       content: map['content'] as String? ?? '',
-      ratingScore: (map['rating_score'] as num?)?.toInt() ?? 0,
-      createdAt:
-          DateTime.tryParse(map['created_at'] as String? ?? '') ??
-          DateTime.now(),
-      userName:
-          profileData?['user_name'] as String? ?? 'ผู้ใช้',
+      createdAt: DateTime.tryParse(map['created_at'] as String? ?? '') ?? DateTime.now(),
+      userName: profileData?['user_name'] as String? ?? 'ผู้ใช้',
       userAvatarUrl: profileData?['avatar_url'] as String?,
     );
   }
 }
-
 
 class RestaurantDetailController extends GetxController {
   final LoginController loginController = Get.find<LoginController>();
   late final FilterController _filterController;
   final supabase = Supabase.instance.client;
 
-  // Controllers รีวิว
-  final TextEditingController commentController = TextEditingController();
-  final RxDouble userRating = 0.0.obs;
-
   final String restaurantId;
 
-  // State ร้านและรีวิว
+  // --- State ---
   final Rx<Restaurant?> restaurant = Rx<Restaurant?>(null);
+  final RxList<CommentModel> comments = <CommentModel>[].obs;
+  final RxBool isLoadingComments = false.obs;
   final RxBool isDeleting = false.obs;
-  final RxList<CommentModel> reviews = <CommentModel>[].obs; 
-  final RxBool isLoadingReviews = false.obs;
 
-  // Controller Report
+  // --- Rating State ---
+  final RxDouble myRating = 0.0.obs;
+  final RxBool isRatingLoading = false.obs;
+
+  // --- Input Controllers ---
+  final TextEditingController commentController = TextEditingController();
   final TextEditingController reportReasonController = TextEditingController();
 
-  // Constructor
   RestaurantDetailController({required this.restaurantId});
 
   @override
@@ -79,7 +69,8 @@ class RestaurantDetailController extends GetxController {
     super.onInit();
     _filterController = Get.find<FilterController>();
     loadRestaurantDetails();
-    _loadReviews();
+    loadComments();
+    loadMyRating();
   }
 
   @override
@@ -89,25 +80,21 @@ class RestaurantDetailController extends GetxController {
     super.onClose();
   }
 
-  // โหลด/รีเฟรชข้อมูล
   void restore() {
     loadRestaurantDetails();
-    _loadReviews();
+    loadComments();
+    loadMyRating();
   }
 
-  // loadRestaurantDetails
   void loadRestaurantDetails() {
     final newRestaurantInstance = _filterController.allRestaurantsObservable
-        .firstWhereOrNull(
-          (res) => res.id == restaurantId,
-        );
-
-    restaurant.value = newRestaurantInstance; 
+        .firstWhereOrNull((res) => res.id == restaurantId);
+    restaurant.value = newRestaurantInstance;
 
     if (restaurant.value == null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (Get.currentRoute.startsWith(AppRoutes.RESTAURANTDETAIL)) {
-          Get.snackbar(
+            Get.snackbar(
             'ข้อผิดพลาด',
             'ไม่พบข้อมูลร้านค้า อาจถูกลบไปแล้ว',
             snackPosition: SnackPosition.TOP,
@@ -121,22 +108,190 @@ class RestaurantDetailController extends GetxController {
     }
   }
 
-  // อัปเดตคะแนนรีวิวชั่วคราว
-  void onRatingChanged(double newRating) {
-    userRating.value = newRating;
+  // --- ส่วนจัดการ Rating (ใช้ตาราง user_ratings_res) ---
+  
+  Future<void> loadMyRating() async {
+    if (!loginController.isLoggedIn.value) {
+      myRating.value = 0.0;
+      return;
+    }
+    try {
+      // [แก้ไข] ใช้ตาราง user_ratings_res
+      final data = await supabase
+          .from('user_ratings_res') 
+          .select('rating')
+          .eq('user_id', loginController.userId.value)
+          .eq('res_id', restaurantId)
+          .maybeSingle();
+
+      if (data != null) {
+        myRating.value = (data['rating'] as num).toDouble();
+      } else {
+        myRating.value = 0.0;
+      }
+    } catch (e) {
+      print("Error loading my rating: $e");
+    }
   }
 
-  // deleteRestaurant
+  Future<void> submitRating(double rating) async {
+    if (!loginController.isLoggedIn.value) {
+      Get.toNamed(AppRoutes.LOGIN);
+      return;
+    }
+
+    if (rating < 1) return;
+
+    isRatingLoading.value = true;
+    try {
+      // [แก้ไข] ใช้ตาราง user_ratings_res
+      await supabase.from('user_ratings_res').upsert({
+        'user_id': loginController.userId.value,
+        'res_id': restaurantId,
+        'rating': rating.toInt(),
+      }, onConflict: 'user_id, res_id');
+
+      myRating.value = rating;
+      
+      final updatedRes = await supabase.from('restaurants').select().eq('id', restaurantId).single();
+      if (restaurant.value != null && updatedRes != null) {
+         restaurant.value = restaurant.value!.copyWith(
+           rating: (updatedRes['rating'] as num?)?.toDouble() ?? restaurant.value!.rating
+         );
+      }
+
+      Get.snackbar('สำเร็จ', 'บันทึกคะแนนของคุณแล้ว',
+        snackPosition: SnackPosition.TOP, backgroundColor: Colors.green.withOpacity(0.8), colorText: Colors.white, duration: const Duration(milliseconds: 800));
+
+    } catch (e) {
+      print("Error submitting rating: $e");
+      Get.snackbar('ข้อผิดพลาด', 'ไม่สามารถบันทึกคะแนนได้');
+    } finally {
+      isRatingLoading.value = false;
+    }
+  }
+
+  // --- ส่วนจัดการ Comments (ยังใช้ตาราง comments เหมือนเดิม) ---
+
+  Future<void> loadComments() async {
+    isLoadingComments.value = true;
+    try {
+      final List<Map<String, dynamic>> data = await supabase
+          .from('comments')
+          .select('''
+            id, 
+            user_id, 
+            content, 
+            created_at, 
+            user_profiles(user_name, avatar_url)
+          ''')
+          .eq('res_id', restaurantId)
+          .order('created_at', ascending: false);
+
+      comments.assignAll(data.map((map) => CommentModel.fromMap(map)).toList());
+    } catch (e) {
+      print("Error loading comments: $e");
+      Get.snackbar('ข้อผิดพลาด', 'ไม่สามารถโหลดข้อความได้: ${e.toString()}');
+    } finally {
+      isLoadingComments.value = false;
+    }
+  }
+
+  Future<void> submitComment() async {
+    if (!loginController.isLoggedIn.value) {
+        Get.defaultDialog(
+        title: 'แจ้งเตือน',
+        middleText: 'กรุณาเข้าสู่ระบบก่อนทำการคอมเมนต์',
+        textConfirm: 'ตกลง',
+        confirmTextColor: Colors.white,
+        onConfirm: () {
+          Get.back();
+          Get.offAllNamed(AppRoutes.LOGIN);
+        },
+        textCancel: 'ยกเลิก',
+        onCancel: () {},
+      );
+       return;
+    }
+    
+    final text = commentController.text.trim();
+    if (text.isEmpty) {
+        Get.snackbar(
+          'ข้อผิดพลาด',
+          'โปรดเขียนข้อความก่อนส่ง',
+          snackPosition: SnackPosition.TOP,
+          backgroundColor: Colors.black.withOpacity(0.1),
+          colorText: Colors.black,
+          duration: const Duration(milliseconds: 900),
+        );
+        return;
+    }
+
+    try {
+      await supabase.from('comments').insert({
+        'user_id': loginController.userId.value,
+        'res_id': restaurantId,
+        'content': text,
+      });
+
+      commentController.clear();
+      await loadComments(); 
+      
+    } catch (e) {
+      print("Error submitting comment: $e");
+      Get.snackbar(
+        'ข้อผิดพลาด',
+        'ไม่สามารถส่งข้อความได้: ${e.toString()}',
+        snackPosition: SnackPosition.TOP,
+        backgroundColor: Colors.red.withOpacity(0.8),
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  void deleteComment(int id) async {
+    if (!loginController.isLoggedIn.value) return;
+
+     Get.defaultDialog(
+      title: "ยืนยันการลบ",
+      middleText: "คุณต้องการลบข้อความนี้ใช่ไหม?",
+      textConfirm: "ลบ",
+      textCancel: "ยกเลิก",
+      confirmTextColor: Colors.white,
+      buttonColor: Colors.red,
+      onConfirm: () async {
+        Get.back();
+        try {
+          await supabase.from('comments').delete().eq('id', id);
+          
+          Get.snackbar(
+            'สำเร็จ',
+            'ลบข้อความเรียบร้อยแล้ว',
+            snackPosition: SnackPosition.TOP,
+            backgroundColor: Colors.black.withOpacity(0.1),
+            colorText: Colors.black,
+            duration: const Duration(milliseconds: 900),
+          );
+
+          loadComments();
+        } catch (e) {
+            print("Error deleting comment: $e");
+          Get.snackbar('ข้อผิดพลาด', 'ลบไม่สำเร็จ: ${e.toString()}');
+        }
+      }
+    );
+  }
+
+  // --- Other Functions ---
+  
   void deleteRestaurant() {
     if (restaurant.value == null) {
       Get.snackbar('ข้อผิดพลาด', 'ไม่สามารถลบ: ไม่พบข้อมูลร้านค้า');
       return;
     }
 
-    final String restaurantName =
-        restaurant.value!.restaurantName;
-    final String currentRestaurantId =
-        restaurant.value!.id;
+    final String restaurantName = restaurant.value!.restaurantName;
+    final String currentRestaurantId = restaurant.value!.id;
 
     Get.defaultDialog(
       title: "ยืนยันการลบ",
@@ -164,12 +319,12 @@ class RestaurantDetailController extends GetxController {
                     ),
                   ),
                 ),
-                Obx(() => ElevatedButton( // Wrap ElevatedButton in Obx to track isDeleting state
+                Obx(() => ElevatedButton( 
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
                   ),
-                  onPressed: isDeleting.value ? null : () async { // Disable button while deleting
+                  onPressed: isDeleting.value ? null : () async { 
                     isDeleting.value = true;
                     Get.back();
                     try {
@@ -180,7 +335,7 @@ class RestaurantDetailController extends GetxController {
 
                       _filterController.removeRestaurantFromList(restaurantId);
 
-                      Get.back(); // กลับไปหน้าก่อนหน้า (Home/MyShop)
+                      Get.back();
                       Get.snackbar(
                         'สำเร็จ',
                         'ลบร้านค้า "$restaurantName" เรียบร้อยแล้ว',
@@ -211,155 +366,13 @@ class RestaurantDetailController extends GetxController {
       ),
     );
   }
-
-  // _loadReviews
-  Future<void> _loadReviews() async {
-    isLoadingReviews.value = true;
-    try {
-      final List<Map<String, dynamic>> data = await supabase
-          .from('comments')
-          .select('''
- 			id,
- 			user_id, 
- 			content,
- 			rating_score,
- 			created_at,
- 			user_profiles (
- 			  user_name,
- 			  avatar_url
- 			)
- 		  ''')
-          .eq('res_id', restaurantId)
-          .order('created_at', ascending: false);
-
-      reviews.assignAll(data.map((map) => CommentModel.fromMap(map)).toList());
-    } catch (e) {
-      print("Error loading reviews: $e");
-      Get.snackbar('ข้อผิดพลาด', 'ไม่สามารถโหลดรีวิวได้: ${e.toString()}');
-    } finally {
-      isLoadingReviews.value = false;
-    }
-  }
-
-  // submitReview
-  void submitReview() async {
-    if (loginController.isLoggedIn.value) {
-      if (commentController.text.trim().isNotEmpty && userRating.value > 0) {
-        final String currentUserId = loginController.userId.value;
-        final String commentContent = commentController.text.trim();
-        final int ratingScore = userRating.value.toInt();
-
-        try {
-          await supabase.from('comments').insert({
-            'user_id': currentUserId,
-            'res_id': restaurantId,
-            'content': commentContent,
-            'rating_score': ratingScore,
-          });
-
-          commentController.clear();
-          userRating.value = 0.0;
-          _loadReviews();
-          Get.snackbar(
-            'ส่งรีวิวแล้ว',
-            'รีวิวของคุณถูกส่งเรียบร้อยแล้วค่ะ!',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.black.withOpacity(0.1),
-            colorText: Colors.black,
-            duration: const Duration(milliseconds: 900),
-          );
-        } catch (e) {
-          print("Error submitting review: $e");
-          Get.snackbar(
-            'ข้อผิดพลาด',
-            'ไม่สามารถส่งรีวิวได้: ${e.toString()}',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.red.withOpacity(0.8),
-            colorText: Colors.white,
-          );
-        }
-      } else {
-        Get.snackbar(
-          'ข้อผิดพลาด',
-          'โปรดให้คะแนนและเขียนคอมเมนต์ให้ครบถ้วนก่อนส่ง',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Colors.black.withOpacity(0.1),
-          colorText: Colors.black,
-          duration: const Duration(milliseconds: 900),
-        );
-      }
-    } else {
-      Get.defaultDialog(
-        title: 'แจ้งเตือน',
-        middleText: 'กรุณาเข้าสู่ระบบก่อนทำการรีวิว',
-        textConfirm: 'ตกลง',
-        confirmTextColor: Colors.white,
-        onConfirm: () {
-          Get.back();
-          Get.offAllNamed(AppRoutes.LOGIN);
-        },
-        textCancel: 'ยกเลิก',
-        onCancel: () {},
-      );
-    }
-  }
-
-  // deleteComment
-  void deleteComment(int commentId) async {
-    if (!loginController.isLoggedIn.value) {
-      Get.snackbar('ข้อผิดพลาด', 'กรุณาเข้าสู่ระบบ');
-      return;
-    }
-
-    Get.defaultDialog(
-      title: "ยืนยันการลบ",
-      titleStyle: const TextStyle(fontWeight: FontWeight.bold),
-      content: const Text("คุณแน่ใจหรือไม่ว่าต้องการลบคอมเมนต์นี้?"),
-      textCancel: "ยกเลิก",
-      textConfirm: "ลบ",
-      confirmTextColor: Colors.white,
-      buttonColor: Colors.red,
-      onConfirm: () async {
-        Get.back(); // ปิด Dialog
-        try {
-          await supabase
-              .from('comments')
-              .delete()
-              .eq('id', commentId);
-          
-          _loadReviews(); // โหลดรีวิวใหม่
-          
-          Get.snackbar(
-            'สำเร็จ',
-            'ลบคอมเมนต์เรียบร้อยแล้ว',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.black.withOpacity(0.1),
-            colorText: Colors.black,
-            duration: const Duration(milliseconds: 900),
-          );
-
-        } catch (e) {
-          print("Error deleting comment: $e");
-          Get.snackbar(
-            'ข้อผิดพลาด',
-            'ไม่สามารถลบคอมเมนต์ได้: ${e.toString()}',
-            snackPosition: SnackPosition.TOP,
-            backgroundColor: Colors.red.withOpacity(0.8),
-            colorText: Colors.white,
-          );
-        }
-      },
-    );
-  }
-
-  // launchMap
+  
   Future<void> launchMap(double? lat, double? lng, String label) async {
     if (lat == null || lng == null) {
       Get.snackbar('ข้อผิดพลาด', 'ไม่พบข้อมูลพิกัดสำหรับร้านนี้');
       return;
     }
-    final String googleMapsUrl =
-        'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
+    final String googleMapsUrl = 'https://www.google.com/maps/search/?api=1&query=$lat,$lng';
     final Uri url = Uri.parse(googleMapsUrl);
     try {
       if (await canLaunchUrl(url)) {
@@ -372,7 +385,6 @@ class RestaurantDetailController extends GetxController {
     }
   }
 
-  // showReportDialog (Comment)
   void showReportDialog(int commentId) {
     if (!loginController.isLoggedIn.value) {
       Get.snackbar('แจ้งเตือน', 'กรุณาเข้าสู่ระบบ...');
@@ -408,7 +420,6 @@ class RestaurantDetailController extends GetxController {
                   ),
                   const SizedBox(height: 8),
                   
-                  // (สร้าง RadioListTile จาก List)
                   ...commentReportOptions.map((reason) {
                     return RadioListTile<String>(
                       title: Text(reason),
@@ -423,7 +434,6 @@ class RestaurantDetailController extends GetxController {
                     );
                   }).toList(),
                   
-                  // (แสดง TextField ถ้าเลือก "อื่นๆ")
                   if (selectedReason == otherReasonKey)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
@@ -462,7 +472,7 @@ class RestaurantDetailController extends GetxController {
             finalReason = selectedReason!;
           }
           
-          Get.back(); // ปิด Dialog
+          Get.back(); 
           _submitReport(
             finalReason, 
             commentId: commentId,
@@ -477,8 +487,7 @@ class RestaurantDetailController extends GetxController {
       ),
     );
   }
-
-  // showReportRestaurantDialog (Restaurant)
+  
   void showReportRestaurantDialog() {
     if (!loginController.isLoggedIn.value) {
       Get.snackbar('แจ้งเตือน', 'กรุณาเข้าสู่ระบบ...');
@@ -515,7 +524,6 @@ class RestaurantDetailController extends GetxController {
                   ),
                   const SizedBox(height: 8),
 
-                  // (RadioListTile map loop)
                   ...restaurantReportOptions.map((reason) {
                     return RadioListTile<String>(
                       title: Text(reason),
@@ -530,7 +538,6 @@ class RestaurantDetailController extends GetxController {
                     );
                   }).toList(),
                   
-                  // (TextField for "อื่นๆ")
                   if (selectedReason == otherReasonKey)
                     Padding(
                       padding: const EdgeInsets.fromLTRB(16.0, 0, 16.0, 8.0),
@@ -570,7 +577,7 @@ class RestaurantDetailController extends GetxController {
             finalReason = selectedReason!;
           }
           
-          Get.back(); // ปิด Dialog
+          Get.back(); 
           _submitReport(
             finalReason, 
             resId: restaurantId,
@@ -586,7 +593,6 @@ class RestaurantDetailController extends GetxController {
     );
   }
 
-  // _submitReport
   Future<void> _submitReport(String reason, {int? commentId, String? resId}) async {
     final String currentUserId = loginController.userId.value;
     try {
@@ -615,5 +621,4 @@ class RestaurantDetailController extends GetxController {
       );
     }
   }
-
-} // End of Controller
+}

@@ -17,10 +17,6 @@ class Restaurant {
 
   final bool hasDelivery; 
   final bool hasDineIn; 
-  final String status; // <<< 1. [เพิ่ม] Field status (approved, pending, suspended)
-
-  final bool hasDelivery; 
-  final bool hasDineIn; 
   
   final String? openingHours;
   final String? phoneNumber;
@@ -75,7 +71,6 @@ class Restaurant {
     double? lng = (map['longitude'] as num?)?.toDouble();
     bool currentIsOpen = map['is_open'] as bool? ?? false;
     String currentStatus = map['status'] as String? ?? 'pending'; // <<< 3. [แก้ไข] ดึง status
-    String currentStatus = map['status'] as String? ?? 'pending'; // <<< 3. [แก้ไข] ดึง status
 
     List<String> promotionList = [];
     final dynamic promoData = map['promo_imgs_urls'];
@@ -86,7 +81,6 @@ class Restaurant {
     }
     
     List<String> galleryList = [];
-    final dynamic galleryData = map['gallery_imgs_urls'];
     final dynamic galleryData = map['gallery_imgs_urls'];
     if (galleryData is List) {
       galleryList = List<String>.from(galleryData.whereType<String>());
@@ -120,7 +114,6 @@ class Restaurant {
   }
 
   // *** แก้ไข copyWith ***
-  // *** แก้ไข copyWith ***
   Restaurant copyWith({
     String? id,
     String? imageUrl,
@@ -129,9 +122,6 @@ class Restaurant {
     String? description,
     double? rating,
     bool? isOpen,
-    String? status, // <<< 5. [เพิ่ม] status
-    bool? hasDelivery, 
-    bool? hasDineIn, 
     String? status, // <<< 5. [เพิ่ม] status
     bool? hasDelivery, 
     bool? hasDineIn, 
@@ -156,9 +146,6 @@ class Restaurant {
       description: description ?? this.description,
       rating: rating ?? this.rating,
       isOpen: isOpen ?? this.isOpen.value,
-      status: status ?? this.status, // <<< 6. [เพิ่ม] status
-      hasDelivery: hasDelivery ?? this.hasDelivery, 
-      hasDineIn: hasDineIn ?? this.hasDineIn, 
       status: status ?? this.status, // <<< 6. [เพิ่ม] status
       hasDelivery: hasDelivery ?? this.hasDelivery, 
       hasDineIn: hasDineIn ?? this.hasDineIn, 
